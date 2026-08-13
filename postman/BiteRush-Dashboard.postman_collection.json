@@ -1,0 +1,131 @@
+{
+  "info": {
+    "name": "BiteRush API",
+    "description": "Manager Dashboard + Menu Management endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "restaurantId",
+      "value": ""
+    },
+    {
+      "key": "menuItemId",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}"
+      }
+    },
+    {
+      "name": "Seed demo data",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/seed"
+      }
+    },
+    {
+      "name": "Manager dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/dashboard/restaurant"
+      }
+    },
+    {
+      "name": "List orders",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/orders?status=pending"
+      }
+    },
+    {
+      "name": "Accept order",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"accepted\"\n}"
+        },
+        "url": "{{baseUrl}}/orders/REPLACE_ORDER_ID/status"
+      }
+    },
+    {
+      "name": "List categories",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/categories"
+      }
+    },
+    {
+      "name": "List menu items",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/menu"
+      }
+    },
+    {
+      "name": "Create menu item",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurantId\": \"{{restaurantId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"Chapli Kebab\",\n  \"description\": \"Spiced flat kebabs grilled hot\",\n  \"basePrice\": 700,\n  \"discountPercent\": 0,\n  \"isAvailable\": true,\n  \"images\": [],\n  \"variants\": [{ \"name\": \"Regular\", \"priceDelta\": 0 }],\n  \"extras\": [{ \"name\": \"Extra chutney\", \"price\": 50 }]\n}"
+        },
+        "url": "{{baseUrl}}/menu"
+      }
+    },
+    {
+      "name": "Update menu item",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"basePrice\": 780,\n  \"discountPercent\": 5\n}"
+        },
+        "url": "{{baseUrl}}/menu/{{menuItemId}}"
+      }
+    },
+    {
+      "name": "Toggle availability",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isAvailable\": false\n}"
+        },
+        "url": "{{baseUrl}}/menu/{{menuItemId}}/availability"
+      }
+    },
+    {
+      "name": "Delete menu item",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/menu/{{menuItemId}}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
+
+export type RestaurantDocument = HydratedDocument<Restaurant>;
+
+@Schema({ timestamps: true })
+export class Restaurant {
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  branch: string;
+
+  @Prop({ default: 0 })
+  avgRating: number;
+}
+
+export const RestaurantSchema = SchemaFactory.createForClass(Restaurant);
