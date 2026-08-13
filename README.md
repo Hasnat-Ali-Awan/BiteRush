@@ -30,6 +30,8 @@ Open `http://localhost:5173/menu`
 
 ## Quick start
 
+**Desktop:** double-click **BiteRush** on your Desktop. It frees ports `3000`/`5173`, starts Docker MongoDB, then backend + frontend.
+
 ```bash
 # 1. MongoDB
 docker compose up -d
