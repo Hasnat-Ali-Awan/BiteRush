@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { api } from '../api'
+import BrandSetup from '../components/BrandSetup'
 import StatCard from '../components/StatCard'
 import { PopularDishesChart, RevenueChart } from '../components/Charts'
 import IncomingOrdersTable from '../components/IncomingOrdersTable'
+import { useAuth } from '../context/AuthContext'
 
 function formatMoney(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`
 }
 
 export default function ManagerDashboard({ onRestaurant }) {
+  const { isMainManager } = useAuth()
+  const { branchId } = useOutletContext() || {}
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -22,9 +27,13 @@ export default function ManagerDashboard({ onRestaurant }) {
     let lastError = null
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
-        const dashboard = await api.getDashboard()
+        const dashboard = await api.getDashboard(
+          branchId ? { branchId } : undefined,
+        )
         setData(dashboard)
-        onRestaurant?.(dashboard.restaurant)
+        if (dashboard.restaurant) {
+          onRestaurant?.(dashboard.restaurant)
+        }
         if (dashboard.toast?.message) {
           setToast(dashboard.toast.message)
         }
@@ -41,7 +50,7 @@ export default function ManagerDashboard({ onRestaurant }) {
     setError(lastError?.message || 'Failed to load dashboard')
     setData(null)
     setLoading(false)
-  }, [onRestaurant])
+  }, [branchId, onRestaurant])
 
   useEffect(() => {
     load()
@@ -52,17 +61,6 @@ export default function ManagerDashboard({ onRestaurant }) {
     const timer = setTimeout(() => setToast(null), 5000)
     return () => clearTimeout(timer)
   }, [toast])
-
-  async function handleSeed() {
-    setLoading(true)
-    try {
-      await api.seed()
-      await load()
-    } catch (err) {
-      setError(err.message)
-      setLoading(false)
-    }
-  }
 
   async function handleAction(orderId, status) {
     setBusyId(orderId)
@@ -76,6 +74,9 @@ export default function ManagerDashboard({ onRestaurant }) {
     }
   }
 
+  const needsBrand = isMainManager && !data?.group && !loading
+  const hasScope = data?.restaurant || (isMainManager && data?.branches?.length)
+
   return (
     <>
       <div className="custom-scrollbar h-[calc(100vh-4rem)] overflow-y-auto p-6">
@@ -83,17 +84,11 @@ export default function ManagerDashboard({ onRestaurant }) {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
             <p className="mt-1 text-on-surface-variant">
-              Live restaurant ops for{' '}
-              {data?.restaurant?.name || 'your branch'}
+              {isMainManager && !branchId
+                ? `All branches · ${data?.group?.name || 'your brand'}`
+                : `Live ops for ${data?.restaurant?.branch || 'your branch'}`}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSeed}
-            className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-container"
-          >
-            Load demo data
-          </button>
         </div>
 
         {loading && !data ? (
@@ -103,17 +98,35 @@ export default function ManagerDashboard({ onRestaurant }) {
         {error ? (
           <div className="mb-6 rounded-xl border border-error/30 bg-error/5 p-4 text-error">
             <p className="font-semibold">{error}</p>
-            <p className="mt-1 text-sm">
-              Make sure MongoDB Docker is up, backend is running, then click
-              “Load demo data” or call{' '}
-              <code className="rounded bg-white px-1">POST /api/v1/seed</code>{' '}
-              in Postman.
-            </p>
           </div>
         ) : null}
 
-        {data ? (
+        {needsBrand ? (
+          <BrandSetup
+            onCreated={async () => {
+              await load()
+            }}
+          />
+        ) : null}
+
+        {hasScope ? (
           <>
+            {isMainManager && data?.branches?.length ? (
+              <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {data.branches.map((branch) => (
+                  <div
+                    key={branch.id}
+                    className="rounded-xl bg-white p-4 shadow-sm"
+                  >
+                    <p className="font-bold">{branch.branch}</p>
+                    <p className="text-sm text-on-surface-variant">
+                      {branch.address || 'No address'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard
                 label="Today's Orders"

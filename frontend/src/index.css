@@ -19,6 +19,8 @@
   --color-warning: #f59e0b;
   --color-error: #d32f2f;
   --color-tertiary: #00685d;
+  --color-status-preparing: #1976d2;
+  --color-status-on-the-way: #7b1fa2;
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
@@ -55,4 +57,9 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #e3e2e0;
   border-radius: 10px;
+}
+
+.kds-card {
+  background: #1a1c1b;
+  border-left-width: 8px;
 }

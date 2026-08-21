@@ -32,11 +32,15 @@
       }
     },
     {
-      "name": "Seed demo data",
+      "name": "Create restaurant",
       "request": {
         "method": "POST",
-        "header": [],
-        "url": "{{baseUrl}}/seed"
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"branch\": \"\",\n  \"cuisine\": \"\",\n  \"eta\": \"\",\n  \"heroImage\": \"\",\n  \"deliveryFee\": 0,\n  \"minOrder\": 0\n}"
+        },
+        "url": "{{baseUrl}}/restaurants"
       }
     },
     {
@@ -90,7 +94,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"restaurantId\": \"{{restaurantId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"Chapli Kebab\",\n  \"description\": \"Spiced flat kebabs grilled hot\",\n  \"basePrice\": 700,\n  \"discountPercent\": 0,\n  \"isAvailable\": true,\n  \"images\": [],\n  \"variants\": [{ \"name\": \"Regular\", \"priceDelta\": 0 }],\n  \"extras\": [{ \"name\": \"Extra chutney\", \"price\": 50 }]\n}"
+          "raw": "{\n  \"restaurantId\": \"{{restaurantId}}\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"\",\n  \"description\": \"\",\n  \"basePrice\": 0,\n  \"discountPercent\": 0,\n  \"isAvailable\": true,\n  \"images\": [],\n  \"variants\": [{ \"name\": \"Regular\", \"priceDelta\": 0 }],\n  \"extras\": []\n}"
         },
         "url": "{{baseUrl}}/menu"
       }

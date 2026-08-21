@@ -1,72 +1,90 @@
 # BiteRush
 
-Food ordering platform rebuilt screen-by-screen from Google Stitch designs.
+Food ordering platform rebuilt from the [Google Stitch BiteRush project](https://stitch.withgoogle.com/project/16097317333868995516).
 
-## Screen 1 — Manager Dashboard
+Stack: **MongoDB (Docker)** · **NestJS API** · **React (Vite) UI**
 
-Stitch: **Manager Dashboard - Lahore BBQ House**
+The database starts empty. There is no seed, demo restaurant, or fake account.
 
-## Screen 2 — Menu Management
+## User roles
 
-Stitch: **Menu Management - Lahore BBQ House** (`000d1aaf…`)
+| Role | How to get access | What they see |
+|------|-------------------|---------------|
+| **Customer** | Self-register at `/register` | Browse branches, cart, checkout, track orders |
+| **Main manager** | Self-register as “Main manager” | Create brand, add branches, invite staff, view **all branch** data |
+| **Branch manager** | Invited by email from main manager | Manage **one branch** only (menu, orders, kitchen, reservations) |
+| **Rider** | Self-register or invited by main manager | Accept ready orders and update delivery status at `/rider` |
 
-- List / filter / search dishes
-- Toggle availability
-- Add / edit drawer (variants + extras)
-- Delete dish
-
-Open `http://localhost:5173/menu`
-
-### Menu API
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/categories` | List categories |
-| GET | `/api/v1/menu` | List dishes (`restaurantId`, `categoryId`, `available`, `search`) |
-| POST | `/api/v1/menu` | Create dish |
-| PATCH | `/api/v1/menu/:id` | Update dish |
-| PATCH | `/api/v1/menu/:id/availability` | Toggle stock |
-| DELETE | `/api/v1/menu/:id` | Delete dish |
+Branch managers cannot self-register. The main manager sends login credentials by email (or logs them in the backend console when SMTP is not configured).
 
 ## Quick start
 
-**Desktop:** double-click **BiteRush** on your Desktop. It frees ports `3000`/`5173`, starts Docker MongoDB, then backend + frontend.
-
 ```bash
-# 1. MongoDB
 docker compose up -d
-
-# 2. Backend
-cd backend
-npm install
-npm run start:dev
-
-# 3. Frontend (new terminal)
-cd frontend
-npm install
-npm run dev
+cd backend && npm install && npm run start:dev
+cd frontend && npm install && npm run dev
 ```
 
-Open `http://localhost:5173` and click **Load demo data**, or:
+Open `http://localhost:5173`
 
-```bash
-curl -X POST http://localhost:3000/api/v1/seed
-curl http://localhost:3000/api/v1/menu
+## Google Maps setup
+
+To enable customer pin selection and live rider tracking, add this to `frontend/.env`:
+
+```env
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_browser_key
 ```
 
-Import `postman/BiteRush-Dashboard.postman_collection.json` into Postman.
+Enable these Google APIs in Google Cloud:
 
-## Postman endpoints (core)
+- `Maps JavaScript API`
+- `Places API`
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/seed` | Seed restaurant, orders, reservations, menu |
-| GET | `/api/v1/dashboard/restaurant` | Manager KPIs |
-| GET | `/api/v1/orders?status=pending` | List orders |
-| PATCH | `/api/v1/orders/:id/status` | Accept / reject |
-| GET | `/api/v1/menu` | Menu list |
-| POST/PATCH/DELETE | `/api/v1/menu...` | Menu CRUD |
+Recommended restrictions for the key:
 
-## Next screens
+- Application restriction: HTTP referrers
+- API restriction: only the Google Maps APIs used above
 
-Kitchen Display, Auth, Home, … — one Stitch screen at a time.
+## Main manager flow
+
+1. Register at `/register` as **Main manager**
+2. Sign in → `/manager` → create your **restaurant brand**
+3. Go to **Branches** → add branches (Gulberg, DHA, etc.)
+4. Invite a **branch manager** per branch (email with temporary password)
+5. Invite **riders** for delivery
+6. Use the branch selector in the sidebar to drill into one branch, or leave it on **All branches** for combined dashboard stats
+
+## Branch manager flow
+
+1. Open the invite email (or backend logs if SMTP is off)
+2. Sign in at `/login`
+3. Manage menu, orders, kitchen, and reservations for **your branch only**
+
+## Rider flow
+
+1. Sign in at `/login` → `/rider`
+2. Accept orders marked **ready** by the kitchen
+3. Update status: picked up → on the way → delivered
+
+## Customer flow
+
+1. Register / sign in
+2. Pick a branch on the home page
+3. Add items to cart
+4. In checkout, search or pin your exact delivery location on Google Maps
+5. Track the rider on the live order map after dispatch
+
+## Optional email (invites)
+
+Add to `backend/.env`:
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=you@example.com
+SMTP_PASS=your-password
+SMTP_FROM=BiteRush <noreply@example.com>
+APP_URL=http://localhost:5173
+```
+
+Without SMTP, invite credentials are printed in the backend log.

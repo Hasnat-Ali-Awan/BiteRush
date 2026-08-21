@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { api } from '../api'
 import DishDrawer from '../components/DishDrawer'
 
@@ -15,6 +16,7 @@ function categoryChipClass(name = '') {
 }
 
 export default function MenuManagement({ restaurantId, onRestaurant }) {
+  const { branchId } = useOutletContext() || {}
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,17 +27,29 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
   const [drawer, setDrawer] = useState({ open: false, mode: 'create', dish: null })
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [newCategory, setNewCategory] = useState('')
+  const [hasRestaurant, setHasRestaurant] = useState(true)
 
   const load = useCallback(async () => {
     setError('')
     try {
       let rid = restaurantId
       if (!rid) {
-        const dashboard = await api.getDashboard()
-        onRestaurant?.(dashboard.restaurant)
-        rid = dashboard.restaurant.id
+        const dashboard = await api.getDashboard(
+          branchId ? { branchId } : undefined,
+        )
+        if (dashboard.restaurant) onRestaurant?.(dashboard.restaurant)
+        rid = branchId || dashboard.restaurant?.id
       }
 
+      if (!rid) {
+        setHasRestaurant(false)
+        setCategories([])
+        setItems([])
+        return
+      }
+
+      setHasRestaurant(true)
       const [cats, menu] = await Promise.all([
         api.getCategories(),
         api.getMenu({
@@ -108,12 +122,17 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
       if (drawer.mode === 'edit' && drawer.dish) {
         await api.updateMenuItem(drawer.dish.id, payload)
       } else {
-        await api.createMenuItem({
-          ...payload,
-          restaurantId:
-            restaurantId ||
-            (await api.getDashboard()).restaurant.id,
-        })
+        const dashboard = await api.getDashboard(
+          branchId ? { branchId } : undefined,
+        )
+        const rid = branchId || restaurantId || dashboard.restaurant?.id
+        await api.createMenuItem(
+          {
+            ...payload,
+            restaurantId: rid,
+          },
+          branchId ? { branchId } : undefined,
+        )
       }
       setDrawer({ open: false, mode: 'create', dish: null })
       await load()
@@ -124,6 +143,18 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
     }
   }
 
+  async function handleAddCategory(event) {
+    event.preventDefault()
+    if (!newCategory.trim()) return
+    try {
+      await api.createCategory({ name: newCategory.trim() })
+      setNewCategory('')
+      await load()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   return (
     <div className="relative flex h-[calc(100vh-4rem)]">
       <div className="custom-scrollbar flex-1 overflow-y-auto p-6">
@@ -131,7 +162,7 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Menu Management</h2>
             <p className="mt-1 text-on-surface-variant">
-              Update and monitor your active branch menu items.
+              Update and monitor your menu items.
             </p>
           </div>
 
@@ -177,6 +208,21 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
               </select>
             </label>
 
+            <form onSubmit={handleAddCategory} className="flex items-center gap-2">
+              <input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="New category"
+                className="rounded-xl border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded-xl border px-3 py-2 text-sm font-semibold"
+              >
+                Add
+              </button>
+            </form>
+
             <button
               type="button"
               onClick={() =>
@@ -194,6 +240,12 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
           <div className="mb-4 rounded-xl border border-error/30 bg-error/5 p-4 text-error">
             {error}
           </div>
+        ) : null}
+
+        {!hasRestaurant ? (
+          <p className="mb-4 rounded-xl bg-white p-4 text-on-surface-variant">
+            Create a restaurant on the dashboard before adding dishes.
+          </p>
         ) : null}
 
         <div className="overflow-hidden rounded-xl border border-surface-variant/30 bg-white shadow-sm">

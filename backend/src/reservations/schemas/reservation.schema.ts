@@ -11,8 +11,14 @@ export class Reservation {
   @Prop({ required: true })
   customerName: string;
 
+  @Prop({ default: '' })
+  phone: string;
+
   @Prop({ required: true })
   partySize: number;
+
+  @Prop({ default: '' })
+  tableLabel: string;
 
   @Prop({ required: true })
   reservedAt: Date;

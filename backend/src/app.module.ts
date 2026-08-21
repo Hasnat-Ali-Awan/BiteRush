@@ -7,9 +7,15 @@ import { AppService } from './app.service';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { OrdersModule } from './orders/orders.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { SeedModule } from './seed/seed.module';
 import { CategoriesModule } from './categories/categories.module';
 import { MenuModule } from './menu/menu.module';
+import { RestaurantsModule } from './restaurants/restaurants.module';
+import { ReservationsModule } from './reservations/reservations.module';
+import { AuthModule } from './auth/auth.module';
+import { RestaurantGroupsModule } from './restaurant-groups/restaurant-groups.module';
+import { MailModule } from './mail/mail.module';
+import { AccessModule } from './access/access.module';
+import { RidersModule } from './riders/riders.module';
 
 @Module({
   imports: [
@@ -21,11 +27,17 @@ import { MenuModule } from './menu/menu.module';
         uri: config.getOrThrow<string>('MONGODB_URI'),
       }),
     }),
+    MailModule,
+    AccessModule,
     OrdersModule,
     DashboardModule,
-    SeedModule,
     CategoriesModule,
     MenuModule,
+    RestaurantsModule,
+    ReservationsModule,
+    RestaurantGroupsModule,
+    RidersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

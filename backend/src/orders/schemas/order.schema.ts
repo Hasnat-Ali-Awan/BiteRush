@@ -32,16 +32,49 @@ export class OrderItem {
 
 const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
 
+@Schema({ _id: false })
+export class OrderLocationPoint {
+  @Prop({ default: 0 })
+  lat: number;
+
+  @Prop({ default: 0 })
+  lng: number;
+}
+
+const OrderLocationPointSchema =
+  SchemaFactory.createForClass(OrderLocationPoint);
+
 @Schema({ timestamps: true })
 export class Order {
   @Prop({ type: Types.ObjectId, ref: 'Restaurant', required: true, index: true })
   restaurantId: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  customerId: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  riderId: Types.ObjectId | null;
 
   @Prop({ required: true, unique: true })
   orderNumber: string;
 
   @Prop({ required: true })
   customerName: string;
+
+  @Prop({ default: '' })
+  deliveryAddress: string;
+
+  @Prop({ type: OrderLocationPointSchema, default: null })
+  deliveryLocation: OrderLocationPoint | null;
+
+  @Prop({ type: OrderLocationPointSchema, default: null })
+  restaurantLocation: OrderLocationPoint | null;
+
+  @Prop({ type: OrderLocationPointSchema, default: null })
+  riderCurrentLocation: OrderLocationPoint | null;
+
+  @Prop({ type: Date, default: null })
+  riderLocationUpdatedAt: Date | null;
 
   @Prop({ type: [OrderItemSchema], default: [] })
   items: OrderItem[];
@@ -60,3 +93,4 @@ export class Order {
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
 OrderSchema.index({ restaurantId: 1, status: 1, createdAt: -1 });
+OrderSchema.index({ riderId: 1, status: 1 });

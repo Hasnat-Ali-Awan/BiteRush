@@ -7,7 +7,11 @@ export class AppService {
       name: 'BiteRush API',
       version: 'v1',
       docs: {
-        seed: 'POST /api/v1/seed',
+        register: 'POST /api/v1/auth/register',
+        login: 'POST /api/v1/auth/login',
+        me: 'GET /api/v1/auth/me',
+        restaurants: 'GET /api/v1/restaurants',
+        createRestaurant: 'POST /api/v1/restaurants',
         dashboard: 'GET /api/v1/dashboard/restaurant',
         orders: 'GET /api/v1/orders',
         updateStatus: 'PATCH /api/v1/orders/:id/status',

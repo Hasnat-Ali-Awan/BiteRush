@@ -1,7 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Restaurant, RestaurantDocument } from '../restaurants/schemas/restaurant.schema';
+import {
+  Restaurant,
+  RestaurantDocument,
+} from '../restaurants/schemas/restaurant.schema';
 import {
   Order,
   OrderDocument,
@@ -11,30 +14,58 @@ import {
   Reservation,
   ReservationDocument,
 } from '../reservations/schemas/reservation.schema';
+import {
+  RestaurantGroup,
+  RestaurantGroupDocument,
+} from '../restaurant-groups/schemas/restaurant-group.schema';
+import { AccessScopeService } from '../access/access-scope.service';
+import type { UserRole } from '../users/schemas/user.schema';
 
 @Injectable()
 export class DashboardService {
   constructor(
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(RestaurantGroup.name)
+    private readonly groupModel: Model<RestaurantGroupDocument>,
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(Reservation.name)
     private readonly reservationModel: Model<ReservationDocument>,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
-  async getRestaurantDashboard(restaurantId?: string) {
-    const restaurant = restaurantId
-      ? await this.restaurantModel.findById(restaurantId).lean()
-      : await this.restaurantModel.findOne().lean();
+  async getRestaurantDashboard(
+    userId: string,
+    role: UserRole,
+    branchId?: string,
+  ) {
+    const restaurantIds = await this.accessScope.getAccessibleRestaurantIds({
+      userId,
+      role,
+    });
 
-    if (!restaurant) {
-      throw new NotFoundException(
-        'No restaurant found. Call POST /api/v1/seed first.',
-      );
+    if (!restaurantIds.length) {
+      return this.emptyDashboard(role);
     }
 
-    const id = restaurant._id;
+    const scopedIds = branchId
+      ? [await this.accessScope.assertRestaurantAccess({ userId, role }, branchId)]
+      : restaurantIds;
+
+    const branches = await this.restaurantModel
+      .find(this.accessScope.buildRestaurantFilter(restaurantIds))
+      .lean();
+
+    const group =
+      role === 'main_manager'
+        ? await this.groupModel.findOne({ ownerId: userId }).lean()
+        : null;
+
+    const primaryBranch =
+      branches.find((b) => String(b._id) === scopedIds[0]) || branches[0];
+
+    const restaurantFilter = { restaurantId: { $in: scopedIds } };
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startOfYesterday = new Date(startOfToday);
@@ -61,19 +92,19 @@ export class DashboardService {
       weekOrders,
     ] = await Promise.all([
       this.orderModel.countDocuments({
-        restaurantId: id,
+        ...restaurantFilter,
         createdAt: { $gte: startOfToday },
         status: { $nin: ['rejected', 'cancelled'] },
       }),
       this.orderModel.countDocuments({
-        restaurantId: id,
+        ...restaurantFilter,
         createdAt: { $gte: startOfYesterday, $lt: startOfToday },
         status: { $nin: ['rejected', 'cancelled'] },
       }),
       this.orderModel.aggregate([
         {
           $match: {
-            restaurantId: id,
+            restaurantId: { $in: scopedIds.map((id) => id) },
             createdAt: { $gte: startOfToday },
             status: { $in: paidStatuses },
           },
@@ -83,7 +114,7 @@ export class DashboardService {
       this.orderModel.aggregate([
         {
           $match: {
-            restaurantId: id,
+            restaurantId: { $in: scopedIds.map((id) => id) },
             createdAt: { $gte: startOfYesterday, $lt: startOfToday },
             status: { $in: paidStatuses },
           },
@@ -91,21 +122,21 @@ export class DashboardService {
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),
       this.reservationModel.countDocuments({
-        restaurantId: id,
+        ...restaurantFilter,
         status: 'pending',
       }),
       this.reservationModel
-        .findOne({ restaurantId: id, status: 'pending' })
+        .findOne({ ...restaurantFilter, status: 'pending' })
         .sort({ createdAt: -1 })
         .lean(),
       this.orderModel
-        .find({ restaurantId: id, status: 'pending' })
+        .find({ ...restaurantFilter, status: 'pending' })
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
       this.orderModel
         .find({
-          restaurantId: id,
+          restaurantId: { $in: scopedIds.map((id) => id) },
           createdAt: {
             $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
@@ -117,26 +148,41 @@ export class DashboardService {
     const revenue = todayRevenueAgg[0]?.total ?? 0;
     const yesterdayRevenue = yesterdayRevenueAgg[0]?.total ?? 0;
 
-    const revenueByDay = this.buildRevenueByDay(weekOrders);
-    const popularDishes = this.buildPopularDishes(weekOrders);
-
     return {
-      restaurant: {
-        id: String(restaurant._id),
-        name: restaurant.name,
-        branch: restaurant.branch,
-        avgRating: restaurant.avgRating,
-      },
+      scope: role === 'main_manager' && !branchId ? 'all_branches' : 'branch',
+      group: group
+        ? {
+            id: String(group._id),
+            name: group.name,
+          }
+        : null,
+      branches: branches.map((branch) => ({
+        id: String(branch._id),
+        name: branch.name,
+        branch: branch.branch,
+        address: branch.address,
+        branchManagerId: branch.branchManagerId
+          ? String(branch.branchManagerId)
+          : null,
+      })),
+      restaurant: primaryBranch
+        ? {
+            id: String(primaryBranch._id),
+            name: primaryBranch.name,
+            branch: primaryBranch.branch,
+            avgRating: primaryBranch.avgRating,
+          }
+        : null,
       stats: {
         todaysOrders,
         todaysOrdersChange: this.percentChange(todaysOrders, yesterdaysOrders),
         revenue,
         revenueChange: this.percentChange(revenue, yesterdayRevenue),
         pendingReservations,
-        avgRating: restaurant.avgRating,
+        avgRating: primaryBranch?.avgRating ?? 0,
       },
-      revenueByDay,
-      popularDishes,
+      revenueByDay: this.buildRevenueByDay(weekOrders),
+      popularDishes: this.buildPopularDishes(weekOrders),
       incomingOrders: incomingOrders.map((order) => ({
         id: String(order._id),
         orderNumber: order.orderNumber,
@@ -151,6 +197,27 @@ export class DashboardService {
             message: `New reservation — Table for ${latestReservation.partySize}, ${this.formatTime(latestReservation.reservedAt)}`,
           }
         : null,
+    };
+  }
+
+  private emptyDashboard(role: UserRole) {
+    return {
+      scope: role === 'main_manager' ? 'all_branches' : 'branch',
+      group: null,
+      branches: [],
+      restaurant: null,
+      stats: {
+        todaysOrders: 0,
+        todaysOrdersChange: 0,
+        revenue: 0,
+        revenueChange: 0,
+        pendingReservations: 0,
+        avgRating: 0,
+      },
+      revenueByDay: [],
+      popularDishes: [],
+      incomingOrders: [],
+      toast: null,
     };
   }
 
