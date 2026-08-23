@@ -36,13 +36,19 @@ export default function Register() {
     setSaving(true)
     setError('')
     try {
-      const user = await register({
+      const res = await register({
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
         role: form.role,
       })
-      navigate(homePathForRole(user.role), { replace: true })
+      if (res?.requiresVerification || !res?.token) {
+        navigate(`/verify-email?email=${encodeURIComponent(form.email.trim())}`, {
+          replace: true,
+        })
+      } else {
+        navigate(homePathForRole(res.user?.role || form.role), { replace: true })
+      }
     } catch (err) {
       setError(err.message)
     } finally {

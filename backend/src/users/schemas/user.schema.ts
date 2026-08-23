@@ -31,7 +31,7 @@ export class User {
   @Prop({ required: true })
   passwordHash: string;
 
-  @Prop({ required: true, enum: USER_ROLES })
+  @Prop({ required: true, enum: USER_ROLES, type: String })
   role: UserRole;
 
   /** Branch this user manages or delivers for */
@@ -41,6 +41,27 @@ export class User {
   /** Restaurant chain owned by a main manager */
   @Prop({ type: Types.ObjectId, ref: 'RestaurantGroup', default: null })
   groupId: Types.ObjectId | null;
+
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ type: String, default: null })
+  emailVerificationToken: string | null;
+
+  @Prop({ type: String, default: null })
+  emailVerificationCode: string | null;
+
+  @Prop({ type: Date, default: null })
+  emailVerificationExpires: Date | null;
+
+  @Prop({ type: String, default: null })
+  resetPasswordToken: string | null;
+
+  @Prop({ type: String, default: null })
+  resetPasswordCode: string | null;
+
+  @Prop({ type: Date, default: null })
+  resetPasswordExpires: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

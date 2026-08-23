@@ -14,17 +14,24 @@ export default function Login() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [isUnverified, setIsUnverified] = useState(false)
+
   async function handleSubmit(event) {
     event.preventDefault()
     setSaving(true)
     setError('')
+    setIsUnverified(false)
     try {
-      const user = await login({ email, password })
+      const user = await login({ email: email.trim(), password })
       const from = location.state?.from
       if (from) navigate(from, { replace: true })
       else navigate(homePathForRole(user.role), { replace: true })
     } catch (err) {
-      setError(err.message)
+      const msg = err.message || 'Login failed'
+      setError(msg)
+      if (msg.toLowerCase().includes('verify')) {
+        setIsUnverified(true)
+      }
     } finally {
       setSaving(false)
     }
@@ -35,8 +42,22 @@ export default function Login() {
       tab="login"
       title="Login"
       subtitle="Sign in with the email and password you registered."
-      error={error}
+      error={!isUnverified ? error : null}
     >
+      {isUnverified && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">{error}</p>
+          <div className="mt-3 flex items-center gap-3">
+            <Link
+              to={`/verify-email?email=${encodeURIComponent(email.trim())}`}
+              className="inline-block rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+            >
+              Verify Email Now
+            </Link>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-6">
         <label className="block text-sm font-semibold">
           Email address
@@ -49,8 +70,16 @@ export default function Login() {
             required
           />
         </label>
-        <label className="mt-4 block text-sm font-semibold">
-          Password
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold">Password</label>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative mt-2">
             <input
               value={password}
@@ -71,11 +100,11 @@ export default function Login() {
               </span>
             </button>
           </div>
-        </label>
+        </div>
         <button
           type="submit"
           disabled={saving}
-          className="mt-6 w-full rounded-xl bg-primary py-3 font-semibold text-white shadow-md disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-primary py-3 font-semibold text-white shadow-md transition hover:opacity-95 disabled:opacity-50"
         >
           {saving ? 'Signing in…' : 'Login'}
         </button>

@@ -53,6 +53,26 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  verifyEmail: (payload) =>
+    request('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  resendVerification: (payload) =>
+    request('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  forgotPassword: (payload) =>
+    request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  resetPassword: (payload) =>
+    request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   me: () => request('/auth/me'),
   getDashboard: (params) => request(`/dashboard/restaurant${toQuery(params)}`),
   getRestaurants: () => request('/restaurants'),

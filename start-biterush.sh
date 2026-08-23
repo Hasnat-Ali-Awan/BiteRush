@@ -222,18 +222,6 @@ wait_http() {
   return 1
 }
 
-seed_if_needed() {
-  info "Checking demo data…"
-  local dash
-  dash="$(curl -fsS "${API_URL}/dashboard/restaurant" 2>/dev/null || true)"
-  if echo "$dash" | grep -q '"success":true'; then
-    green "Dashboard data already present"
-    return 0
-  fi
-  info "Seeding demo restaurant, orders, and menu…"
-  curl -fsS -X POST "${API_URL}/seed" >/dev/null || yellow "Seed request failed (you can click Load demo data in the UI)"
-}
-
 open_browser() {
   if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$WEB_URL" >/dev/null 2>&1 || true
@@ -289,8 +277,6 @@ main() {
     die "Backend did not start"
   fi
   green "API ready → ${API_URL}"
-
-  seed_if_needed
 
   info "Starting frontend on :${FRONTEND_PORT} …"
   : >"$FRONTEND_LOG"

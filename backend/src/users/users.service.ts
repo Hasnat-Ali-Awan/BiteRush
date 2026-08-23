@@ -25,6 +25,10 @@ export class UsersService {
     role: UserRole;
     restaurantId?: string | null;
     groupId?: string | null;
+    isEmailVerified?: boolean;
+    emailVerificationToken?: string | null;
+    emailVerificationCode?: string | null;
+    emailVerificationExpires?: Date | null;
   }) {
     return this.userModel.create({
       name: data.name.trim(),
@@ -33,7 +37,72 @@ export class UsersService {
       role: data.role,
       restaurantId: data.restaurantId ?? null,
       groupId: data.groupId ?? null,
+      isEmailVerified: data.isEmailVerified ?? false,
+      emailVerificationToken: data.emailVerificationToken ?? null,
+      emailVerificationCode: data.emailVerificationCode ?? null,
+      emailVerificationExpires: data.emailVerificationExpires ?? null,
     });
+  }
+
+  findByVerificationToken(token: string) {
+    return this.userModel.findOne({ emailVerificationToken: token });
+  }
+
+  findByResetPasswordToken(token: string) {
+    return this.userModel.findOne({ resetPasswordToken: token });
+  }
+
+  async setVerificationData(
+    userId: string,
+    data: {
+      emailVerificationToken: string | null;
+      emailVerificationCode: string | null;
+      emailVerificationExpires: Date | null;
+    },
+  ) {
+    return this.userModel.findByIdAndUpdate(userId, data, {
+      returnDocument: 'after',
+    });
+  }
+
+  async markEmailVerified(userId: string) {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationCode: null,
+        emailVerificationExpires: null,
+      },
+      { returnDocument: 'after' },
+    );
+  }
+
+  async setResetPasswordData(
+    userId: string,
+    data: {
+      resetPasswordToken: string | null;
+      resetPasswordCode: string | null;
+      resetPasswordExpires: Date | null;
+    },
+  ) {
+    return this.userModel.findByIdAndUpdate(userId, data, {
+      returnDocument: 'after',
+    });
+  }
+
+  async updatePasswordAndClearReset(userId: string, passwordHash: string) {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordCode: null,
+        resetPasswordExpires: null,
+        isEmailVerified: true,
+      },
+      { returnDocument: 'after' },
+    );
   }
 
   async setRestaurantId(userId: string, restaurantId: string) {

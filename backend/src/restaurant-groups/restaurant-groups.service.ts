@@ -114,6 +114,7 @@ export class RestaurantGroupsService {
       passwordHash,
       role: 'branch_manager',
       restaurantId: String(branch._id),
+      isEmailVerified: true,
     });
 
     await this.restaurantModel.findByIdAndUpdate(branchId, {
@@ -157,6 +158,7 @@ export class RestaurantGroupsService {
       passwordHash,
       role: 'rider',
       restaurantId: String(branch._id),
+      isEmailVerified: true,
     });
 
     const mail = await this.mailService.sendInvite({

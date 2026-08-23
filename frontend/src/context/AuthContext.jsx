@@ -44,10 +44,22 @@ export function AuthProvider({ children }) {
       isRider: user?.role === 'rider',
       isCustomer: user?.role === 'customer',
       async register(input) {
-        return applyAuth(await api.register(input))
+        return api.register(input)
       },
       async login(input) {
         return applyAuth(await api.login(input))
+      },
+      async verifyEmail(input) {
+        return applyAuth(await api.verifyEmail(input))
+      },
+      async resendVerification(input) {
+        return api.resendVerification(input)
+      },
+      async forgotPassword(input) {
+        return api.forgotPassword(input)
+      },
+      async resetPassword(input) {
+        return api.resetPassword(input)
       },
       async refresh() {
         return refresh()
