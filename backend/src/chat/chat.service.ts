@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -25,6 +27,7 @@ import {
   ScopeUser,
 } from '../access/access-scope.service';
 import { SendChatMessageDto, UploadChatImageDto } from './dto/chat.dto';
+import { ChatGateway } from './chat.gateway';
 
 const CLOSED_STATUSES = ['delivered', 'cancelled', 'rejected'];
 
@@ -42,6 +45,8 @@ export class ChatService {
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
     private readonly accessScope: AccessScopeService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {
     if (!fs.existsSync(this.uploadsDir)) {
       fs.mkdirSync(this.uploadsDir, { recursive: true });
@@ -180,7 +185,10 @@ export class ChatService {
       mentions: dto.mentions || [],
     });
 
-    return this.mapMessage(created.toObject());
+    const mapped = this.mapMessage(created.toObject());
+    this.chatGateway.broadcastMessageToOrder(String(order._id), mapped);
+
+    return mapped;
   }
 
   async uploadImage(
@@ -235,7 +243,7 @@ export class ChatService {
       const order = await this.orderModel.findById(orderId).lean();
       if (!order) return;
 
-      await this.chatMessageModel.create({
+      const created = await this.chatMessageModel.create({
         orderId: order._id,
         senderId: null,
         senderName: 'BiteRush System',
@@ -246,6 +254,9 @@ export class ChatService {
         location: null,
         mentions: [],
       });
+
+      const mapped = this.mapMessage(created.toObject());
+      this.chatGateway.broadcastMessageToOrder(String(order._id), mapped);
     } catch {
       // Ignore system log error
     }

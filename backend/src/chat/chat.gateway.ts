@@ -43,7 +43,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const payload = this.jwtService.verify(token);
         client.data.user = {
           userId: payload.sub,
-          email: payload.email,
           role: payload.role,
         } as ScopeUser;
       }
@@ -67,7 +66,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const payload = this.jwtService.verify(data.token);
         user = {
           userId: payload.sub,
-          email: payload.email,
           role: payload.role,
         };
         client.data.user = user;
@@ -107,7 +105,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const payload = this.jwtService.verify(data.token);
         user = {
           userId: payload.sub,
-          email: payload.email,
           role: payload.role,
         };
         client.data.user = user;

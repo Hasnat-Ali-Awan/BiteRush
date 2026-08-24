@@ -12,7 +12,9 @@ import {
 } from '../restaurants/schemas/restaurant.schema';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
+import { ChatGateway } from './chat.gateway';
 import { AccessModule } from '../access/access.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -23,9 +25,10 @@ import { AccessModule } from '../access/access.module';
       { name: Restaurant.name, schema: RestaurantSchema },
     ]),
     AccessModule,
+    forwardRef(() => AuthModule),
   ],
   controllers: [ChatController],
-  providers: [ChatService],
-  exports: [ChatService, MongooseModule],
+  providers: [ChatService, ChatGateway],
+  exports: [ChatService, ChatGateway, MongooseModule],
 })
 export class ChatModule {}

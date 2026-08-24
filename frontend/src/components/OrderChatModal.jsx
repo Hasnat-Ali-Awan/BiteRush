@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../api'
+import { api, getToken } from '../api'
+import { getSocket } from '../socket'
 import { useAuth } from '../context/AuthContext'
 import Icon from './Icon'
 
@@ -57,53 +58,96 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
   const [showMentionsPopup, setShowMentionsPopup] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')
   const [locating, setLocating] = useState(false)
+  const [typingInfo, setTypingInfo] = useState(null)
+  const [isConnected, setIsConnected] = useState(true)
 
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
-  const lastMessageCountRef = useRef(0)
+  const typingTimeoutRef = useRef(null)
 
   const loadChat = useCallback(
-    async (isBackground = false) => {
+    async () => {
       if (!orderId) return
-      if (!isBackground) setLoading(true)
+      setLoading(true)
       try {
         const data = await api.getOrderChat(orderId)
         setChatData(data)
         setError('')
-
-        // Auto-scroll if new message arrived
-        if (data.messages?.length !== lastMessageCountRef.current) {
-          lastMessageCountRef.current = data.messages?.length || 0
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-          }, 100)
-        }
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+        }, 80)
       } catch (err) {
-        if (!isBackground) {
-          setError(err.message || 'Failed to load group chat')
-        }
+        setError(err.message || 'Failed to load group chat')
       } finally {
-        if (!isBackground) setLoading(false)
+        setLoading(false)
       }
     },
     [orderId],
   )
 
+  // Real-time WebSocket connection
   useEffect(() => {
-    loadChat(false)
-    const timer = setInterval(() => {
-      loadChat(true)
-    }, 2500)
-    return () => clearInterval(timer)
-  }, [loadChat])
+    loadChat()
 
-  // Scroll to bottom on initial load
-  useEffect(() => {
-    if (!loading && chatData?.messages?.length) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    const socket = getSocket()
+    const token = getToken()
+
+    function onConnect() {
+      setIsConnected(true)
+      socket.emit('join_order_chat', { orderId, token })
     }
-  }, [loading])
+
+    function onDisconnect() {
+      setIsConnected(false)
+    }
+
+    function onNewOrderMessage(payload) {
+      if (payload.orderId === orderId && payload.message) {
+        setChatData((prev) => {
+          if (!prev) return prev
+          const exists = prev.messages?.some((m) => m.id === payload.message.id)
+          if (exists) return prev
+          return {
+            ...prev,
+            messages: [...(prev.messages || []), payload.message],
+          }
+        })
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        }, 50)
+      }
+    }
+
+    function onUserTyping(payload) {
+      if (payload.orderId === orderId) {
+        if (payload.isTyping) {
+          setTypingInfo(payload)
+        } else {
+          setTypingInfo(null)
+        }
+      }
+    }
+
+    if (socket.connected) {
+      setIsConnected(true)
+      socket.emit('join_order_chat', { orderId, token })
+    } else {
+      socket.on('connect', onConnect)
+    }
+
+    socket.on('disconnect', onDisconnect)
+    socket.on('new_order_message', onNewOrderMessage)
+    socket.on('user_order_typing', onUserTyping)
+
+    return () => {
+      socket.emit('leave_order_chat', { orderId })
+      socket.off('connect', onConnect)
+      socket.off('disconnect', onDisconnect)
+      socket.off('new_order_message', onNewOrderMessage)
+      socket.off('user_order_typing', onUserTyping)
+    }
+  }, [orderId, loadChat])
 
   const myRole = chatData?.myRole || (user?.role === 'rider' ? 'rider' : user?.role === 'customer' ? 'customer' : 'manager')
   const isClosed = chatData?.isClosed || ['delivered', 'cancelled', 'rejected'].includes(chatData?.order?.status)
@@ -136,6 +180,27 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
     const val = e.target.value
     setInputText(val)
 
+    // Emit live typing event via WebSockets
+    const socket = getSocket()
+    if (socket.connected && !isClosed) {
+      socket.emit('order_typing', {
+        orderId,
+        isTyping: true,
+        senderName: user?.name?.split(' ')[0] || myRole,
+        senderRole: myRole,
+      })
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit('order_typing', {
+          orderId,
+          isTyping: false,
+          senderName: user?.name?.split(' ')[0] || myRole,
+          senderRole: myRole,
+        })
+      }, 1800)
+    }
+
     // Check if user is typing @ for mention autocomplete
     const lastAtPos = val.lastIndexOf('@')
     if (lastAtPos !== -1 && lastAtPos >= val.length - 15) {
@@ -163,6 +228,18 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
   async function handleSendMessage(e) {
     e?.preventDefault()
     if (isClosed || sending || (!inputText.trim() && !imagePreview)) return
+
+    // Stop typing indicator
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    const socket = getSocket()
+    if (socket.connected) {
+      socket.emit('order_typing', {
+        orderId,
+        isTyping: false,
+        senderName: user?.name || myRole,
+        senderRole: myRole,
+      })
+    }
 
     setSending(true)
     setError('')
@@ -197,7 +274,6 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
       setImagePreview(null)
       setShowMentionsPopup(false)
       setShowPresets(false)
-      await loadChat(true)
     } catch (err) {
       setError(err.message || 'Failed to send message')
     } finally {
@@ -309,10 +385,16 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     isClosed
                       ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : !isConnected
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   }`}
                 >
-                  {isClosed ? 'Archived (Delivered/Closed)' : 'Live Delivery Chat'}
+                  {isClosed
+                    ? 'Archived (Delivered/Closed)'
+                    : !isConnected
+                      ? 'Reconnecting…'
+                      : '⚡ Live WebSockets'}
                 </span>
               </div>
               <p className="text-xs text-[#8696a0] line-clamp-1 mt-0.5">
@@ -507,6 +589,22 @@ export default function OrderChatModal({ orderId, orderNumber, onClose }) {
               </div>
             )
           })}
+
+          {/* LIVE TYPING INDICATOR */}
+          {typingInfo ? (
+            <div className="flex items-center gap-2 text-xs text-[#8696a0] bg-[#182229] px-3.5 py-1.5 rounded-full w-fit animate-fade-in border border-[#2a3942]">
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:0.2s]"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:0.4s]"></span>
+              </span>
+              <span>
+                <strong className="text-white">{typingInfo.senderName}</strong>{' '}
+                <span className="text-[#00a884]">({typingInfo.senderRole})</span> is typing…
+              </span>
+            </div>
+          ) : null}
+
           <div ref={messagesEndRef} />
         </div>
 
