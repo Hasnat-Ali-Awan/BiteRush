@@ -138,7 +138,21 @@ export class AuthService {
       payload = null;
     }
 
-    // 2. Fallback: Parse JWT payload (for dev or encoded credential)
+    // 2. Fallback: Try userinfo API if it is an OAuth access token
+    if (!payload?.email) {
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${encodeURIComponent(credential)}`,
+        );
+        if (res.ok) {
+          payload = (await res.json()) as GoogleTokenPayload;
+        }
+      } catch {
+        payload = null;
+      }
+    }
+
+    // 3. Fallback: Parse JWT payload
     if (!payload?.email) {
       try {
         const parts = credential.split('.');
