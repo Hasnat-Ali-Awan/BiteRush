@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { api } from '../api'
 import DishDrawer from '../components/DishDrawer'
+import Icon from '../components/Icon'
 
 function formatMoney(amount) {
   return Number(amount || 0).toLocaleString('en-PK')
@@ -168,9 +169,10 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
-              <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">
-                search
-              </span>
+              <Icon
+                name="search"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant h-4 w-4"
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -230,7 +232,7 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
               }
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-semibold text-white shadow-md transition-all hover:brightness-110 active:scale-95"
             >
-              <span className="material-symbols-outlined">add</span>
+              <Icon name="add" className="h-5 w-5 text-white" />
               Add Dish
             </button>
           </div>
@@ -375,20 +377,22 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            className="rounded-xl p-2 text-primary hover:bg-primary/10"
+                            className="rounded-xl p-2 text-primary hover:bg-primary/10 flex items-center justify-center"
                             onClick={() =>
                               setDrawer({ open: true, mode: 'edit', dish: item })
                             }
+                            title="Edit dish"
                           >
-                            <span className="material-symbols-outlined">edit</span>
+                            <Icon name="edit" className="h-5 w-5" />
                           </button>
                           <button
                             type="button"
                             disabled={busyId === item.id}
-                            className="rounded-xl p-2 text-error hover:bg-error/10"
+                            className="rounded-xl p-2 text-error hover:bg-error/10 flex items-center justify-center"
                             onClick={() => handleDelete(item)}
+                            title="Delete dish"
                           >
-                            <span className="material-symbols-outlined">delete</span>
+                            <Icon name="delete" className="h-5 w-5" />
                           </button>
                         </div>
                       </td>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AuthShell from '../components/AuthShell'
+import Icon from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 
 export default function ResetPassword() {
@@ -135,11 +136,13 @@ export default function ResetPassword() {
               <button
                 type="button"
                 onClick={() => setShowPassword((val) => !val)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant hover:text-on-surface flex items-center justify-center"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                <span className="material-symbols-outlined">
-                  {showPassword ? 'visibility_off' : 'visibility'}
-                </span>
+                <Icon
+                  name={showPassword ? 'visibility_off' : 'visibility'}
+                  className="h-5 w-5 text-on-surface-variant"
+                />
               </button>
             </div>
           </label>

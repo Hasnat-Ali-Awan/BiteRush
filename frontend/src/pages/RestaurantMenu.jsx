@@ -141,6 +141,24 @@ export default function RestaurantMenu() {
   const minOrder = Number(restaurant?.minOrder || 0)
   const isMinOrderMet = minOrder === 0 || subtotal >= minOrder
 
+  if (loading && !restaurant) {
+    return (
+      <div className="mx-auto max-w-[1200px] px-4 py-8 space-y-6 animate-fade-in">
+        <div className="h-72 rounded-2xl skeleton-shimmer shadow-xs" />
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 w-28 rounded-full skeleton-shimmer" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-44 rounded-2xl skeleton-shimmer shadow-xs" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8">
       {toast ? (

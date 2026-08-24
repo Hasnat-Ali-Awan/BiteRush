@@ -8,12 +8,17 @@ import {
   Restaurant,
   RestaurantSchema,
 } from '../restaurants/schemas/restaurant.schema';
+import {
+  ChatMessage,
+  ChatMessageSchema,
+} from '../chat/schemas/chat-message.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Order.name, schema: OrderSchema },
       { name: Restaurant.name, schema: RestaurantSchema },
+      { name: ChatMessage.name, schema: ChatMessageSchema },
     ]),
     AccessModule,
   ],

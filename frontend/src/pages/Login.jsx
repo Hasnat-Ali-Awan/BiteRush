@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import Icon from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { homePathForRole } from '../api'
 
@@ -106,11 +107,13 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant flex items-center justify-center"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              <span className="material-symbols-outlined">
-                {showPassword ? 'visibility_off' : 'visibility'}
-              </span>
+              <Icon
+                name={showPassword ? 'visibility_off' : 'visibility'}
+                className="h-5 w-5 text-on-surface-variant hover:text-on-surface"
+              />
             </button>
           </div>
         </div>

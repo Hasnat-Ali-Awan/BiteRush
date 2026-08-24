@@ -24,21 +24,25 @@ export function invalidateClientCache(prefix = '') {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retries = 2) {
   const isGet = !options.method || options.method === 'GET'
   const cacheKey = `${path}`
 
-  // Instant 0ms response from RAM if cached within 15 seconds
+  // Instant 0ms response from RAM if cached within 20 seconds
   if (isGet && clientCache.has(cacheKey)) {
     const entry = clientCache.get(cacheKey)
-    if (Date.now() - entry.timestamp < 15000) {
+    if (Date.now() - entry.timestamp < 20000) {
       return entry.data
     }
   }
 
   const token = getToken()
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 12000) // 12s timeout
+
   try {
     const res = await fetch(`${BASE}${path}`, {
+      signal: options.signal || controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -46,6 +50,7 @@ async function request(path, options = {}) {
       },
       ...options,
     })
+    clearTimeout(timeoutId)
 
     const json = await res.json().catch(() => ({}))
     if (!res.ok || json.success === false) {
@@ -59,15 +64,42 @@ async function request(path, options = {}) {
 
     if (isGet) {
       clientCache.set(cacheKey, { data, timestamp: Date.now() })
+      // Persist critical catalog data in localStorage for offline / instant warm boot
+      if (path.includes('/restaurants') || path.includes('/categories')) {
+        try {
+          localStorage.setItem(`br_cache_${cacheKey}`, JSON.stringify({ data, ts: Date.now() }))
+        } catch {
+          // ignore quota error
+        }
+      }
     } else {
       invalidateClientCache()
     }
 
     return data
   } catch (err) {
-    // If on slow/offline network, fallback to cached data if available
-    if (isGet && clientCache.has(cacheKey)) {
-      return clientCache.get(cacheKey).data
+    clearTimeout(timeoutId)
+
+    // Retry transient network errors for GET requests
+    if (isGet && retries > 0 && (err.name === 'AbortError' || err.message?.includes('fetch') || err.message?.includes('network'))) {
+      await new Promise((r) => setTimeout(r, 400 * (3 - retries)))
+      return request(path, options, retries - 1)
+    }
+
+    // If on slow/offline network, fallback to memory cache or localStorage
+    if (isGet) {
+      if (clientCache.has(cacheKey)) {
+        return clientCache.get(cacheKey).data
+      }
+      try {
+        const persisted = localStorage.getItem(`br_cache_${cacheKey}`)
+        if (persisted) {
+          const parsed = JSON.parse(persisted)
+          if (parsed?.data) return parsed.data
+        }
+      } catch {
+        // ignore
+      }
     }
     throw err
   }
@@ -172,6 +204,17 @@ export const api = {
     request(`/orders/${id}/assign-rider`, {
       method: 'PATCH',
       body: JSON.stringify({ riderId }),
+    }),
+  getOrderChat: (orderId) => request(`/orders/${orderId}/chat`),
+  sendOrderChatMessage: (orderId, payload) =>
+    request(`/orders/${orderId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  uploadOrderChatImage: (orderId, dataUrl) =>
+    request(`/orders/${orderId}/chat/upload`, {
+      method: 'POST',
+      body: JSON.stringify({ dataUrl }),
     }),
   getRiderDeliveries: (params) => request(`/rider/deliveries${toQuery(params)}`),
   getRiderAvailable: () => request('/rider/available'),

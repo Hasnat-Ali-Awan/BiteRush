@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { api } from '../api'
+import OrderChatModal from '../components/OrderChatModal'
 
 function money(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`
@@ -37,6 +38,8 @@ export default function Orders({ restaurantId, onRestaurant }) {
   const [busyId, setBusyId] = useState('')
   const [error, setError] = useState('')
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [chatOrderId, setChatOrderId] = useState(null)
+  const [chatOrderNumber, setChatOrderNumber] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -211,7 +214,19 @@ export default function Orders({ restaurantId, onRestaurant }) {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex justify-end gap-1.5 items-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatOrderId(order.id)
+                          setChatOrderNumber(order.orderNumber)
+                        }}
+                        className="rounded-lg bg-[#005c4b] px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#008f6f] active:scale-95 transition flex items-center gap-1"
+                        title="Open Order WhatsApp Group Chat"
+                      >
+                        <span>💬</span>
+                        <span className="hidden sm:inline">Chat</span>
+                      </button>
                       {order.status === 'pending' ? (
                         <>
                           <button
@@ -348,7 +363,18 @@ export default function Orders({ restaurantId, onRestaurant }) {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setChatOrderId(selectedOrder.id)
+                  setChatOrderNumber(selectedOrder.orderNumber)
+                }}
+                className="flex items-center gap-2 rounded-xl bg-[#005c4b] px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-[#008f6f] active:scale-95 transition"
+              >
+                <span>💬</span>
+                <span>Open Group Chat</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
@@ -359,6 +385,15 @@ export default function Orders({ restaurantId, onRestaurant }) {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* MANAGER ORDER GROUP CHAT MODAL */}
+      {chatOrderId ? (
+        <OrderChatModal
+          orderId={chatOrderId}
+          orderNumber={chatOrderNumber}
+          onClose={() => setChatOrderId(null)}
+        />
       ) : null}
     </div>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import Icon from '../components/Icon'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -189,7 +190,7 @@ export default function Home() {
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="h-64 animate-pulse rounded-2xl bg-surface-container" />
+              <div key={n} className="h-64 rounded-2xl skeleton-shimmer shadow-xs" />
             ))}
           </div>
         ) : filteredRestaurants.length === 0 ? (
@@ -299,7 +300,7 @@ export default function Home() {
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md shadow-primary/20 transition hover:scale-105 active:scale-95"
                       title="Add to cart"
                     >
-                      <span className="material-symbols-outlined text-xl">add</span>
+                      <Icon name="add" className="h-5 w-5 text-white" />
                     </button>
                   </div>
                 </div>

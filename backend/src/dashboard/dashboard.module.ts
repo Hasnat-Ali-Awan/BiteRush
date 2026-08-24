@@ -16,6 +16,7 @@ import {
 import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
 import { AccessModule } from '../access/access.module';
+import { CacheModule } from '../common/cache/cache.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AccessModule } from '../access/access.module';
       { name: Reservation.name, schema: ReservationSchema },
     ]),
     AccessModule,
+    CacheModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

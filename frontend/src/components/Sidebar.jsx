@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import BiteRushLogo from './BiteRushLogo'
+import Icon from './Icon'
 import { useAuth } from '../context/AuthContext'
 
 const BASE_NAV = [
@@ -63,9 +64,10 @@ export default function Sidebar({ restaurant, branchId, branches, onBranchChange
           >
             {({ isActive }) => (
               <>
-                <span className={`material-symbols-outlined ${isActive ? 'filled' : ''}`}>
-                  {item.icon}
-                </span>
+                <Icon
+                  name={item.icon}
+                  className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'}`}
+                />
                 <span>{item.label}</span>
               </>
             )}
@@ -78,8 +80,8 @@ export default function Sidebar({ restaurant, branchId, branches, onBranchChange
           to={restaurant?.id ? `/restaurants/${restaurant.id}` : '/'}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-white shadow-lg shadow-primary/20 transition-transform active:scale-95"
         >
-          <span className="material-symbols-outlined text-xl">storefront</span>
-          View storefront
+          <Icon name="storefront" className="h-5 w-5 text-white" />
+          <span>View storefront</span>
         </Link>
       </div>
     </aside>

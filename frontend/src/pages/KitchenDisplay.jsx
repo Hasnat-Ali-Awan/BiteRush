@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 
+import OrderChatModal from '../components/OrderChatModal'
+
 function ticketNo(order) {
   return order.orderNumber?.replace('BR-', '#') || order.orderNumber
 }
@@ -14,7 +16,7 @@ function elapsed(createdAt) {
   return `${mm}:${ss}`
 }
 
-function Column({ title, count, colorClass, accent, orders, actionLabel, nextStatus, onAction, busyId }) {
+function Column({ title, count, colorClass, accent, orders, actionLabel, nextStatus, onAction, onOpenChat, busyId }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col border-r border-white/10">
       <div className={`flex items-center justify-between px-5 py-4 ${colorClass}`}>
@@ -33,9 +35,19 @@ function Column({ title, count, colorClass, accent, orders, actionLabel, nextSta
             >
               <div className="flex flex-1 flex-col gap-4 p-5">
                 <div className="flex items-start justify-between">
-                  <span className="text-5xl font-black text-white">{ticketNo(order)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-5xl font-black text-white">{ticketNo(order)}</span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenChat(order.id, order.orderNumber)}
+                      className="rounded-lg bg-[#005c4b] p-2 text-xs font-bold text-white shadow-md hover:bg-[#008f6f] active:scale-95 transition"
+                      title="Open Order Group Chat"
+                    >
+                      💬
+                    </button>
+                  </div>
                   <div className="text-right">
-                    <span className="rounded bg-white px-2 py-1 text-xs font-black uppercase">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-black uppercase text-black">
                       Delivery
                     </span>
                     <p className="mt-2 text-xl font-bold text-white">{elapsed(order.createdAt)}</p>
@@ -74,6 +86,8 @@ export default function KitchenDisplay() {
   const [restaurant, setRestaurant] = useState(null)
   const [busyId, setBusyId] = useState('')
   const [error, setError] = useState('')
+  const [chatOrderId, setChatOrderId] = useState(null)
+  const [chatOrderNumber, setChatOrderNumber] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -122,6 +136,11 @@ export default function KitchenDisplay() {
     }
   }
 
+  function handleOpenChat(orderId, orderNum) {
+    setChatOrderId(orderId)
+    setChatOrderNumber(orderNum)
+  }
+
   return (
     <div className="flex h-screen flex-col bg-[#0a0a0a] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
@@ -148,6 +167,7 @@ export default function KitchenDisplay() {
           actionLabel="Start Cooking"
           nextStatus="preparing"
           onAction={handleAction}
+          onOpenChat={handleOpenChat}
           busyId={busyId}
         />
         <Column
@@ -159,6 +179,7 @@ export default function KitchenDisplay() {
           actionLabel="Mark Ready"
           nextStatus="ready"
           onAction={handleAction}
+          onOpenChat={handleOpenChat}
           busyId={busyId}
         />
         <Column
@@ -170,6 +191,7 @@ export default function KitchenDisplay() {
           actionLabel="Done"
           nextStatus="assigned"
           onAction={handleAction}
+          onOpenChat={handleOpenChat}
           busyId={busyId}
         />
       </section>
@@ -177,6 +199,14 @@ export default function KitchenDisplay() {
         <span className="font-bold text-primary">Kitchen live</span>
         <span className="ml-auto">BiteRush ops</span>
       </footer>
+
+      {chatOrderId ? (
+        <OrderChatModal
+          orderId={chatOrderId}
+          orderNumber={chatOrderNumber}
+          onClose={() => setChatOrderId(null)}
+        />
+      ) : null}
     </div>
   )
 }

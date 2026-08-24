@@ -16,6 +16,7 @@ import { RestaurantGroupsModule } from './restaurant-groups/restaurant-groups.mo
 import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
 import { RidersModule } from './riders/riders.module';
+import { ChatModule } from './chat/chat.module';
 
 import { CacheModule } from './common/cache/cache.module';
 
@@ -46,6 +47,7 @@ import { CacheModule } from './common/cache/cache.module';
     ReservationsModule,
     RestaurantGroupsModule,
     RidersModule,
+    ChatModule,
     AuthModule,
   ],
   controllers: [AppController],

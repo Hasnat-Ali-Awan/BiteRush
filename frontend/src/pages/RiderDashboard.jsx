@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import Icon from '../components/Icon'
+import OrderChatModal from '../components/OrderChatModal'
 import { useAuth } from '../context/AuthContext'
 
 const NEXT_STATUS = {
@@ -22,6 +24,8 @@ export default function RiderDashboard() {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState('')
   const [sharingLocation, setSharingLocation] = useState(false)
+  const [activeChatOrderId, setActiveChatOrderId] = useState(null)
+  const [activeChatOrderNumber, setActiveChatOrderNumber] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -227,9 +231,7 @@ export default function RiderDashboard() {
                           </p>
                         ) : null}
                       </div>
-                      <span className="material-symbols-outlined text-3xl text-primary">
-                        two_wheeler
-                      </span>
+                      <Icon name="two_wheeler" className="h-8 w-8 text-primary" />
                     </div>
 
                     <div className="mt-4 flex gap-2">
@@ -242,6 +244,17 @@ export default function RiderDashboard() {
                         <span>🗺️</span>
                         <span>Google Maps</span>
                       </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveChatOrderId(order.id)
+                          setActiveChatOrderNumber(order.orderNumber)
+                        }}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#005c4b] py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#008f6f] active:scale-95 transition"
+                      >
+                        <span>💬</span>
+                        <span>Group Chat</span>
+                      </button>
                     </div>
 
                     {NEXT_STATUS[order.status] ? (
@@ -261,6 +274,15 @@ export default function RiderDashboard() {
           )}
         </section>
       </main>
+
+      {/* RIDER ORDER GROUP CHAT MODAL */}
+      {activeChatOrderId ? (
+        <OrderChatModal
+          orderId={activeChatOrderId}
+          orderNumber={activeChatOrderNumber}
+          onClose={() => setActiveChatOrderId(null)}
+        />
+      ) : null}
     </div>
   )
 }

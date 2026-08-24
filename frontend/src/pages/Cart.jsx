@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import Icon from '../components/Icon'
 import { useCart } from '../context/CartContext'
 
 function money(amount) {
@@ -109,10 +110,10 @@ export default function Cart() {
               <button
                 type="button"
                 onClick={() => removeItem(item.lineId)}
-                className="p-1 text-on-surface-variant/60 hover:text-error"
+                className="p-1 text-on-surface-variant/60 hover:text-error flex items-center justify-center"
                 title="Remove item"
               >
-                <span className="material-symbols-outlined text-xl">delete</span>
+                <Icon name="delete" className="h-5 w-5" />
               </button>
             </li>
           ))}
@@ -123,7 +124,7 @@ export default function Cart() {
             to={cart.restaurant?.id ? `/restaurants/${cart.restaurant.id}` : '/'}
             className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
           >
-            <span className="material-symbols-outlined text-lg">add_circle</span>
+            <Icon name="add" className="h-5 w-5 text-primary" />
             Add more items from this restaurant
           </Link>
         </div>

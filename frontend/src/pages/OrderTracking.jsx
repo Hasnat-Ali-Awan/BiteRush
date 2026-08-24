@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import TrackingMap from '../components/TrackingMap'
+import OrderChatModal from '../components/OrderChatModal'
 
 const STEPS = [
   { key: 'pending', label: 'Order Received', desc: 'Your order was sent to the restaurant' },
@@ -23,6 +24,7 @@ export default function OrderTracking() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
 
   useEffect(() => {
     let timer
@@ -60,7 +62,7 @@ export default function OrderTracking() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10 relative">
       {error ? (
         <div className="mb-6 rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error">
           {error}
@@ -76,6 +78,34 @@ export default function OrderTracking() {
             rider={riderPoint}
             status={order?.status}
           />
+
+          {/* 3-PERSON WHATSAPP GROUP CHAT BANNER */}
+          <div className="rounded-2xl bg-gradient-to-r from-[#005c4b] to-[#0b3b33] p-4 text-white shadow-md flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl">
+                💬
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-white">Order Group Chat</h3>
+                  <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    3-Way Group
+                  </span>
+                </div>
+                <p className="text-xs text-white/80 mt-0.5">
+                  Chat with your delivery rider & kitchen manager in real-time.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-extrabold text-[#005c4b] shadow-md hover:bg-gray-100 active:scale-95 transition"
+            >
+              <span>💬</span>
+              <span>Open Group Chat</span>
+            </button>
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-3 text-xs text-on-surface-variant">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
@@ -207,6 +237,14 @@ export default function OrderTracking() {
           ) : null}
 
           <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#005c4b] py-3 text-center text-xs font-bold text-white shadow-md hover:bg-[#008f6f] transition"
+            >
+              <span>💬</span>
+              <span>Open WhatsApp Group Chat</span>
+            </button>
             <Link
               to="/"
               className="flex-1 rounded-xl border border-outline-variant/50 py-3 text-center text-xs font-bold text-on-surface hover:bg-surface-container"
@@ -222,6 +260,26 @@ export default function OrderTracking() {
           </div>
         </div>
       </div>
+
+      {/* FLOATING ACTION CHAT BUTTON */}
+      <button
+        type="button"
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-[#005c4b] px-4 py-3 text-sm font-bold text-white shadow-2xl hover:bg-[#008f6f] active:scale-95 transition ring-4 ring-white/30"
+        title="Open Order Group Chat"
+      >
+        <span className="text-lg">💬</span>
+        <span>Order Chat</span>
+      </button>
+
+      {/* CHAT MODAL */}
+      {chatOpen ? (
+        <OrderChatModal
+          orderId={id}
+          orderNumber={order?.orderNumber}
+          onClose={() => setChatOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }

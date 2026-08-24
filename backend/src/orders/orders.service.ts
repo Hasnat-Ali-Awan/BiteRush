@@ -7,6 +7,10 @@ import {
   Restaurant,
   RestaurantDocument,
 } from '../restaurants/schemas/restaurant.schema';
+import {
+  ChatMessage,
+  ChatMessageDocument,
+} from '../chat/schemas/chat-message.schema';
 
 @Injectable()
 export class OrdersService {
@@ -15,6 +19,8 @@ export class OrdersService {
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(ChatMessage.name)
+    private readonly chatMessageModel: Model<ChatMessageDocument>,
   ) {}
 
   async create(dto: CreateOrderDto, customerId?: string) {
@@ -91,6 +97,7 @@ export class OrdersService {
       .findByIdAndUpdate(id, { status }, { returnDocument: 'after' })
       .lean();
     if (!order) throw new NotFoundException('Order not found');
+    await this.notifyChatStatusChange(id, status);
     return this.mapOrder(order);
   }
 
@@ -103,6 +110,10 @@ export class OrdersService {
       )
       .lean();
     if (!order) throw new NotFoundException('Order not found');
+    await this.notifyChatSystemMessage(
+      orderId,
+      '🛵 A delivery rider has been assigned to this order.',
+    );
     return this.mapOrder(order);
   }
 
@@ -115,7 +126,46 @@ export class OrdersService {
       )
       .lean();
     if (!order) throw new NotFoundException('Delivery no longer available');
+    await this.notifyChatSystemMessage(
+      orderId,
+      '🛵 Rider accepted the delivery request and is preparing for pickup.',
+    );
     return this.mapOrder(order);
+  }
+
+  private async notifyChatStatusChange(orderId: string, status: OrderStatus) {
+    const messages: Partial<Record<OrderStatus, string>> = {
+      accepted: '🍳 Restaurant accepted the order and confirmed preparation.',
+      preparing: '🔥 Kitchen is preparing and packaging the items.',
+      ready: '📦 Order is ready and waiting for rider pickup.',
+      picked_up: '🛵 Rider picked up the order from the restaurant.',
+      on_the_way: '🛵 Rider is on the way to your delivery address.',
+      delivered: '✅ Order has been delivered. Enjoy your meal! (Chat room is now archived)',
+      rejected: '❌ Order was rejected by the restaurant. (Chat room is now archived)',
+      cancelled: '❌ Order was cancelled. (Chat room is now archived)',
+    };
+    const text = messages[status];
+    if (text) {
+      await this.notifyChatSystemMessage(orderId, text);
+    }
+  }
+
+  private async notifyChatSystemMessage(orderId: string, text: string) {
+    try {
+      await this.chatMessageModel.create({
+        orderId,
+        senderId: null,
+        senderName: 'BiteRush System',
+        senderRole: 'system',
+        text,
+        type: 'system',
+        imageUrl: null,
+        location: null,
+        mentions: [],
+      });
+    } catch {
+      // Non-blocking log
+    }
   }
 
   async updateRiderLocation(

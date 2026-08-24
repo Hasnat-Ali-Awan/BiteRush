@@ -1,8 +1,14 @@
+import { useState } from 'react'
+import OrderChatModal from './OrderChatModal'
+
 function formatMoney(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`
 }
 
 export default function IncomingOrdersTable({ orders = [], onAction, busyId }) {
+  const [chatOrderId, setChatOrderId] = useState(null)
+  const [chatOrderNumber, setChatOrderNumber] = useState('')
+
   return (
     <div className="rounded-xl bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
       <div className="mb-4 flex items-center justify-between">
@@ -47,7 +53,19 @@ export default function IncomingOrdersTable({ orders = [], onAction, busyId }) {
                   </td>
                   <td className="py-4 font-bold">{formatMoney(order.total)}</td>
                   <td className="py-4">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatOrderId(order.id)
+                          setChatOrderNumber(order.orderNumber)
+                        }}
+                        className="rounded-xl bg-[#005c4b] px-3 py-2 font-semibold text-white transition-transform active:scale-95 hover:bg-[#008f6f] flex items-center gap-1 text-xs"
+                        title="Chat with Customer & Rider"
+                      >
+                        <span>💬</span>
+                        <span>Chat</span>
+                      </button>
                       <button
                         type="button"
                         disabled={busyId === order.id}
@@ -72,6 +90,14 @@ export default function IncomingOrdersTable({ orders = [], onAction, busyId }) {
           </tbody>
         </table>
       </div>
+
+      {chatOrderId ? (
+        <OrderChatModal
+          orderId={chatOrderId}
+          orderNumber={chatOrderNumber}
+          onClose={() => setChatOrderId(null)}
+        />
+      ) : null}
     </div>
   )
 }

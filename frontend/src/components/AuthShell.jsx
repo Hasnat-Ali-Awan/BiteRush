@@ -14,11 +14,17 @@ export default function AuthShell({
       {/* LEFT SIDE: RESTAURANT SHOWCASE IMAGE WITH OVERLAYS */}
       <div className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between p-12 text-white">
         {/* Background Image */}
-        <img
-          src="/auth-banner.jpg"
-          alt="BiteRush Gourmet Cuisine"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <picture>
+          <source srcSet="/auth-banner.webp" type="image/webp" />
+          <img
+            src="/auth-banner.jpg"
+            alt="BiteRush Gourmet Cuisine"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        </picture>
 
         {/* Ambient Dark Gradient Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30 backdrop-blur-[1px]" />

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import BiteRushLogo from './BiteRushLogo'
+import Icon from './Icon'
 import { useAuth } from '../context/AuthContext'
 
 export default function TopBar() {
@@ -20,9 +21,10 @@ export default function TopBar() {
           <BiteRushLogo size={28} compact showWordmark={false} />
         </div>
         <div className="relative w-full max-w-md">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-            search
-          </span>
+          <Icon
+            name="search"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant h-5 w-5"
+          />
           <input
             className="w-full rounded-xl border-none bg-surface-container-low py-2 pl-10 text-base outline-none ring-primary/50 focus:ring-2"
             placeholder="Search orders, dishes..."

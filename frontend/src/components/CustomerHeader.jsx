@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import BiteRushLogo from './BiteRushLogo'
+import Icon from './Icon'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
@@ -37,9 +38,9 @@ export default function CustomerHeader() {
         <div className="flex items-center gap-3">
           <Link
             to="/cart"
-            className="relative rounded-xl p-2 hover:bg-surface-container"
+            className="relative rounded-xl p-2 hover:bg-surface-container flex items-center justify-center"
           >
-            <span className="material-symbols-outlined">shopping_cart</span>
+            <Icon name="shopping_cart" className="h-6 w-6 text-on-surface" />
             {count > 0 ? (
               <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
                 {count}

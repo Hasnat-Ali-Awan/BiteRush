@@ -19,6 +19,7 @@ import {
   RestaurantGroupDocument,
 } from '../restaurant-groups/schemas/restaurant-group.schema';
 import { AccessScopeService } from '../access/access-scope.service';
+import { MemoryCacheService } from '../common/cache/memory-cache.service';
 import type { UserRole } from '../users/schemas/user.schema';
 
 @Injectable()
@@ -33,6 +34,7 @@ export class DashboardService {
     @InjectModel(Reservation.name)
     private readonly reservationModel: Model<ReservationDocument>,
     private readonly accessScope: AccessScopeService,
+    private readonly cache: MemoryCacheService,
   ) {}
 
   async getRestaurantDashboard(
@@ -40,6 +42,10 @@ export class DashboardService {
     role: UserRole,
     branchId?: string,
   ) {
+    const cacheKey = `dashboard:${userId}:${role}:${branchId || 'all'}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const restaurantIds = await this.accessScope.getAccessibleRestaurantIds({
       userId,
       role,
@@ -153,7 +159,7 @@ export class DashboardService {
     const revenue = todayRevenueAgg[0]?.total ?? 0;
     const yesterdayRevenue = yesterdayRevenueAgg[0]?.total ?? 0;
 
-    return {
+    const result = {
       scope: role === 'main_manager' && !branchId ? 'all_branches' : 'branch',
       group: group
         ? {
@@ -203,6 +209,9 @@ export class DashboardService {
           }
         : null,
     };
+
+    this.cache.set(cacheKey, result, 5);
+    return result;
   }
 
   private emptyDashboard(role: UserRole) {

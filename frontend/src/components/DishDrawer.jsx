@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from './Icon'
 
 const emptyForm = {
   name: '',
@@ -112,9 +113,10 @@ export default function DishDrawer({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high"
+          className="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center"
+          aria-label="Close"
         >
-          <span className="material-symbols-outlined">close</span>
+          <Icon name="close" className="h-5 w-5" />
         </button>
       </div>
 
@@ -239,9 +241,7 @@ export default function DishDrawer({
                   addRow('variants', { name: '', priceDelta: 0 })
                 }
               >
-                <span className="material-symbols-outlined text-xs">
-                  add_circle
-                </span>
+                <Icon name="add" className="h-4 w-4 text-primary" />
                 Add Size
               </button>
             </div>
@@ -276,12 +276,11 @@ export default function DishDrawer({
                   </div>
                   <button
                     type="button"
-                    className="text-on-surface-variant/50 hover:text-error"
+                    className="text-on-surface-variant/50 hover:text-error flex items-center justify-center"
                     onClick={() => removeRow('variants', index)}
+                    title="Delete size"
                   >
-                    <span className="material-symbols-outlined text-xl">
-                      delete
-                    </span>
+                    <Icon name="delete" className="h-5 w-5" />
                   </button>
                 </div>
               ))}
@@ -296,9 +295,7 @@ export default function DishDrawer({
                 className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
                 onClick={() => addRow('extras', { name: '', price: 0 })}
               >
-                <span className="material-symbols-outlined text-xs">
-                  add_circle
-                </span>
+                <Icon name="add" className="h-4 w-4 text-primary" />
                 Add Extra
               </button>
             </div>
@@ -328,12 +325,11 @@ export default function DishDrawer({
                   </div>
                   <button
                     type="button"
-                    className="text-on-surface-variant/50 hover:text-error"
+                    className="text-on-surface-variant/50 hover:text-error flex items-center justify-center"
                     onClick={() => removeRow('extras', index)}
+                    title="Delete extra"
                   >
-                    <span className="material-symbols-outlined text-xl">
-                      delete
-                    </span>
+                    <Icon name="delete" className="h-5 w-5" />
                   </button>
                 </div>
               ))}

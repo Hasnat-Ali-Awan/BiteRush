@@ -1,3 +1,5 @@
+import Icon from './Icon'
+
 export default function StatCard({ label, value, change, icon, suffix }) {
   const up = typeof change === 'number' && change >= 0
 
@@ -7,9 +9,9 @@ export default function StatCard({ label, value, change, icon, suffix }) {
         <p className="text-xs font-semibold tracking-wider text-on-surface-variant uppercase">
           {label}
         </p>
-        <span className="material-symbols-outlined rounded-lg bg-primary/10 p-2 text-primary">
-          {icon}
-        </span>
+        <div className="rounded-lg bg-primary/10 p-2 text-primary flex items-center justify-center">
+          <Icon name={icon} className="h-5 w-5 text-primary" />
+        </div>
       </div>
       <p className="text-3xl font-bold tracking-tight text-on-surface">
         {value}
