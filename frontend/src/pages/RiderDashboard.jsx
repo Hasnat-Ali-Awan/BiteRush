@@ -50,8 +50,24 @@ export default function RiderDashboard() {
 
   useEffect(() => {
     load()
-    const timer = setInterval(load, 15000)
-    return () => clearInterval(timer)
+    const timer = setInterval(() => {
+      if (!document.hidden) {
+        load()
+      }
+    }, 12000)
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        load()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [load])
 
   useEffect(() => {
@@ -61,9 +77,27 @@ export default function RiderDashboard() {
       return undefined
     }
 
+    let lastSent = 0
+    let lastCoords = null
     setSharingLocation(true)
+
     const watchId = navigator.geolocation.watchPosition(
       ({ coords }) => {
+        const now = Date.now()
+        // Throttle location updates to minimum 4s interval to save battery and network bandwidth
+        if (now - lastSent < 4000) return
+        if (
+          lastCoords &&
+          Math.abs(lastCoords.lat - coords.latitude) < 0.00005 &&
+          Math.abs(lastCoords.lng - coords.longitude) < 0.00005 &&
+          now - lastSent < 15000
+        ) {
+          return
+        }
+
+        lastSent = now
+        lastCoords = { lat: coords.latitude, lng: coords.longitude }
+
         api
           .updateRiderLocation(current.id, {
             lat: coords.latitude,

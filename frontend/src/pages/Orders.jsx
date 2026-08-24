@@ -65,8 +65,24 @@ export default function Orders({ restaurantId, onRestaurant }) {
 
   useEffect(() => {
     load()
-    const timer = setInterval(load, 5000)
-    return () => clearInterval(timer)
+    const timer = setInterval(() => {
+      if (!document.hidden) {
+        load()
+      }
+    }, 5000)
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        load()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [load])
 
   const filteredOrders = useMemo(() => {

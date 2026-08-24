@@ -10,6 +10,15 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   build: {
@@ -22,6 +31,9 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             if (id.includes('@react-google-maps')) {
               return 'vendor-maps'
+            }
+            if (id.includes('socket.io') || id.includes('engine.io')) {
+              return 'vendor-socket'
             }
             if (
               id.includes('react') ||

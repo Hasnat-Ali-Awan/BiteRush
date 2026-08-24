@@ -28,10 +28,16 @@ async function request(path, options = {}, retries = 2) {
   const isGet = !options.method || options.method === 'GET'
   const cacheKey = `${path}`
 
-  // Instant 0ms response from RAM if cached within 20 seconds
-  if (isGet && clientCache.has(cacheKey)) {
+  const isCatalog =
+    path.includes('/restaurants') ||
+    path.includes('/categories') ||
+    path.includes('/menu')
+  const cacheTtl = isCatalog ? 30000 : 0 // 30s cache for static catalogs, 0s for live order & status data
+
+  // Instant 0ms response from RAM if catalog data cached within TTL
+  if (isGet && cacheTtl > 0 && clientCache.has(cacheKey)) {
     const entry = clientCache.get(cacheKey)
-    if (Date.now() - entry.timestamp < 20000) {
+    if (Date.now() - entry.timestamp < cacheTtl) {
       return entry.data
     }
   }

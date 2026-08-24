@@ -28,20 +28,40 @@ export default function OrderTracking() {
 
   useEffect(() => {
     let timer
+    let isTerminated = false
+
     async function load() {
+      if (document.hidden || isTerminated) return
       try {
         const next = await api.getOrder(id)
         setOrder(next)
         setError('')
+        if (['delivered', 'cancelled', 'rejected'].includes(next?.status)) {
+          isTerminated = true
+          clearInterval(timer)
+        }
       } catch (err) {
         setError(err.message)
       } finally {
         setLoading(false)
       }
     }
+
     load()
-    timer = setInterval(load, 4000)
-    return () => clearInterval(timer)
+    timer = setInterval(load, 3500)
+
+    function handleVisibilityChange() {
+      if (!document.hidden && !isTerminated) {
+        load()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [id])
 
   const isCancelled = order?.status === 'cancelled' || order?.status === 'rejected'

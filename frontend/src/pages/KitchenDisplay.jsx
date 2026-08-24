@@ -107,8 +107,24 @@ export default function KitchenDisplay() {
 
   useEffect(() => {
     load()
-    const timer = setInterval(load, 4000)
-    return () => clearInterval(timer)
+    const timer = setInterval(() => {
+      if (!document.hidden) {
+        load()
+      }
+    }, 4000)
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        load()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [load])
 
   const pending = useMemo(

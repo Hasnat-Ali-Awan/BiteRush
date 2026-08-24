@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   Restaurant,
   RestaurantDocument,
@@ -76,7 +76,8 @@ export class DashboardService {
     const primaryBranch =
       branches.find((b) => String(b._id) === scopedIds[0]) || branches[0];
 
-    const restaurantFilter = { restaurantId: { $in: scopedIds } };
+    const scopedObjectIds = scopedIds.map((id) => new Types.ObjectId(id));
+    const restaurantFilter = { restaurantId: { $in: scopedObjectIds } };
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startOfYesterday = new Date(startOfToday);
@@ -115,7 +116,7 @@ export class DashboardService {
       this.orderModel.aggregate([
         {
           $match: {
-            restaurantId: { $in: scopedIds.map((id) => id) },
+            restaurantId: { $in: scopedObjectIds },
             createdAt: { $gte: startOfToday },
             status: { $in: paidStatuses },
           },
@@ -125,7 +126,7 @@ export class DashboardService {
       this.orderModel.aggregate([
         {
           $match: {
-            restaurantId: { $in: scopedIds.map((id) => id) },
+            restaurantId: { $in: scopedObjectIds },
             createdAt: { $gte: startOfYesterday, $lt: startOfToday },
             status: { $in: paidStatuses },
           },
@@ -139,20 +140,23 @@ export class DashboardService {
       this.reservationModel
         .findOne({ ...restaurantFilter, status: 'pending' })
         .sort({ createdAt: -1 })
+        .select('partySize reservedAt')
         .lean(),
       this.orderModel
         .find({ ...restaurantFilter, status: 'pending' })
         .sort({ createdAt: -1 })
         .limit(10)
+        .select('orderNumber customerName items total status createdAt')
         .lean(),
       this.orderModel
         .find({
-          restaurantId: { $in: scopedIds.map((id) => id) },
+          restaurantId: { $in: scopedObjectIds },
           createdAt: {
             $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
           status: { $in: paidStatuses },
         })
+        .select('total createdAt items')
         .lean(),
     ]);
 
