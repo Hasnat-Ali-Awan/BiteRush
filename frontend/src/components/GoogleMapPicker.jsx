@@ -15,11 +15,17 @@ export default function GoogleMapPicker({
 }) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const [map, setMap] = useState(null)
+  const [fullMap, setFullMap] = useState(null)
   const [locating, setLocating] = useState(false)
   const [searching, setSearching] = useState(false)
   const [geoError, setGeoError] = useState('')
-  const inputRef = useRef(null)
-  const autocompleteInstanceRef = useRef(null)
+  const [isFullScreen, setIsFullScreen] = useState(false)
+
+  // Live Autocomplete Suggestions
+  const [suggestions, setSuggestions] = useState([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const searchContainerRef = useRef(null)
+  const fullSearchContainerRef = useRef(null)
 
   const center = useMemo(() => {
     if (value && Number.isFinite(value.lat) && Number.isFinite(value.lng)) {
@@ -34,15 +40,40 @@ export default function GoogleMapPicker({
     libraries: LIBRARIES,
   })
 
+  // Smart reverse geocode (Google with Nominatim backup)
   const reverseGeocode = useCallback(
-    (lat, lng) => {
-      if (!window.google?.maps?.Geocoder) return
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === 'OK' && results?.[0]?.formatted_address) {
-          onAddressChange?.(results[0].formatted_address)
+    async (lat, lng) => {
+      let resolved = false
+      if (window.google?.maps?.Geocoder) {
+        try {
+          const geocoder = new window.google.maps.Geocoder()
+          await new Promise((resolve) => {
+            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+              if (status === 'OK' && results?.[0]?.formatted_address) {
+                onAddressChange?.(results[0].formatted_address)
+                resolved = true
+              }
+              resolve()
+            })
+          })
+        } catch {
+          resolved = false
         }
-      })
+      }
+
+      if (!resolved) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+          )
+          const data = await res.json()
+          if (data?.display_name) {
+            onAddressChange?.(data.display_name)
+          }
+        } catch {
+          // ignore
+        }
+      }
     },
     [onAddressChange],
   )
@@ -63,87 +94,132 @@ export default function GoogleMapPicker({
     updatePoint({ lat, lng }, true)
   }
 
-  // Geocode search by query text (called on Enter or clicking Search button)
+  // Live Debounced Autocomplete Search as user types
+  useEffect(() => {
+    const query = address?.trim()
+    if (!query || query.length < 2) {
+      setSuggestions([])
+      setShowDropdown(false)
+      return undefined
+    }
+
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(
+            query,
+          )}`,
+        )
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          const parsed = data.map((item, idx) => {
+            const parts = (item.display_name || '').split(',')
+            const mainTitle = parts[0]?.trim() || item.name || query
+            const secondary = parts.slice(1, 4).join(', ').trim()
+            return {
+              id: item.place_id || idx,
+              title: mainTitle,
+              subtitle: secondary || item.display_name,
+              displayName: item.display_name,
+              lat: parseFloat(item.lat),
+              lng: parseFloat(item.lon),
+            }
+          })
+          setSuggestions(parsed)
+          setShowDropdown(true)
+        } else {
+          setSuggestions([])
+          setShowDropdown(false)
+        }
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [address])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target) &&
+        fullSearchContainerRef.current &&
+        !fullSearchContainerRef.current.contains(e.target)
+      ) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  function handleSelectSuggestion(suggestion) {
+    setShowDropdown(false)
+    setSuggestions([])
+    setGeoError('')
+    onAddressChange?.(suggestion.displayName || suggestion.title)
+
+    const next = { lat: suggestion.lat, lng: suggestion.lng }
+    onChange?.(next)
+
+    map?.panTo(next)
+    map?.setZoom(16)
+    fullMap?.panTo(next)
+    fullMap?.setZoom(16)
+  }
+
+  // Geocode on Enter
   const handleGeocodeSearch = useCallback(
-    (queryText) => {
+    async (queryText) => {
       const query = (queryText !== undefined ? queryText : address)?.trim()
       if (!query) return
-      if (!window.google?.maps?.Geocoder) {
-        setGeoError('Google Maps Geocoder is not loaded yet.')
+
+      if (suggestions.length > 0) {
+        handleSelectSuggestion(suggestions[0])
         return
       }
 
       setSearching(true)
       setGeoError('')
 
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ address: query }, (results, status) => {
-        setSearching(false)
-        if (status === 'OK' && results?.[0]?.geometry?.location) {
-          const loc = results[0].geometry.location
-          const lat = loc.lat()
-          const lng = loc.lng()
-          const next = { lat, lng }
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+            query,
+          )}`,
+        )
+        const data = await res.json()
+        if (data && data.length > 0 && data[0].lat && data[0].lon) {
+          const next = {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+          }
           onChange?.(next)
-          if (results[0].formatted_address) {
-            onAddressChange?.(results[0].formatted_address)
+          if (data[0].display_name) {
+            onAddressChange?.(data[0].display_name)
           }
           map?.panTo(next)
           map?.setZoom(16)
-        } else {
-          setGeoError(
-            `Could not find coordinates for "${query}". Try adding city name or click on the map.`,
-          )
-        }
-      })
-    },
-    [address, map, onChange, onAddressChange],
-  )
-
-  // Attach Google Places Autocomplete directly to the input element
-  useEffect(() => {
-    if (!isLoaded || !inputRef.current || !window.google?.maps?.places?.Autocomplete) {
-      return undefined
-    }
-
-    try {
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        inputRef.current,
-        {
-          fields: ['geometry', 'formatted_address', 'name'],
-        },
-      )
-
-      autocompleteInstanceRef.current = autocomplete
-
-      const listener = autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace()
-        if (place?.geometry?.location) {
-          const lat = place.geometry.location.lat()
-          const lng = place.geometry.location.lng()
-          const next = { lat, lng }
-          onChange?.(next)
-          const formatted = place.formatted_address || place.name || ''
-          if (formatted) {
-            onAddressChange?.(formatted)
-          }
-          map?.panTo(next)
-          map?.setZoom(16)
+          fullMap?.panTo(next)
+          fullMap?.setZoom(16)
+          setShowDropdown(false)
           setGeoError('')
-        } else if (inputRef.current?.value) {
-          handleGeocodeSearch(inputRef.current.value)
+        } else {
+          setGeoError(`Location "${query}" not found. Click on the map to pin.`)
         }
-      })
-
-      return () => {
-        if (window.google?.maps?.event && listener) {
-          window.google.maps.event.removeListener(listener)
-        }
+      } catch {
+        setGeoError(`Could not search location. Click on the map to pin.`)
+      } finally {
+        setSearching(false)
       }
-    } catch {
-      return undefined
-    }
-  }, [isLoaded, map, onChange, onAddressChange, handleGeocodeSearch])
+    },
+    [address, map, fullMap, suggestions, onChange, onAddressChange],
+  )
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
@@ -162,11 +238,13 @@ export default function GoogleMapPicker({
         updatePoint(next, true)
         map?.panTo(next)
         map?.setZoom(16)
+        fullMap?.panTo(next)
+        fullMap?.setZoom(16)
       },
       (err) => {
         setLocating(false)
         if (err.code === 1) {
-          setGeoError('Location permission denied. Please allow location access in your browser.')
+          setGeoError('Location permission denied. Please allow location access in browser.')
         } else {
           setGeoError('Could not retrieve current location. Please click on the map.')
         }
@@ -182,6 +260,8 @@ export default function GoogleMapPicker({
     onChange?.(null)
     onAddressChange?.('')
     setGeoError('')
+    setSuggestions([])
+    setShowDropdown(false)
   }
 
   if (!apiKey) {
@@ -221,25 +301,27 @@ export default function GoogleMapPicker({
             </span>
           ) : (
             <span className="inline-flex items-center rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
-              Click map or search area
+              Type to search or click map
             </span>
           )}
         </div>
+
         <div className="flex items-center gap-2">
           {hasValidPoint ? (
             <button
               type="button"
               onClick={handleClearLocation}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-on-surface-variant transition hover:bg-surface-container hover:text-error"
+              className="rounded-lg px-2 py-1 text-xs font-medium text-on-surface-variant transition hover:bg-surface-container hover:text-error"
             >
               Clear pin
             </button>
           ) : null}
+
           <button
             type="button"
             disabled={locating}
             onClick={useCurrentLocation}
-            className="flex items-center gap-1.5 rounded-xl border border-outline-variant/40 bg-white px-3 py-1.5 text-xs font-semibold text-on-surface shadow-sm transition hover:bg-surface-container disabled:opacity-50"
+            className="flex items-center gap-1 rounded-xl border border-outline-variant/40 bg-white px-2.5 py-1 text-xs font-semibold text-on-surface shadow-sm transition hover:bg-surface-container disabled:opacity-50"
           >
             {locating ? (
               <>
@@ -252,9 +334,19 @@ export default function GoogleMapPicker({
             ) : (
               <>
                 <span>📍</span>
-                <span>Use my location</span>
+                <span>My Location</span>
               </>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullScreen(true)}
+            className="flex items-center gap-1 rounded-xl border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary transition hover:bg-primary/10"
+            title="Open map in full screen for easy searching and pinning"
+          >
+            <span>⛶</span>
+            <span>Full Screen</span>
           </button>
         </div>
       </div>
@@ -265,44 +357,76 @@ export default function GoogleMapPicker({
         </div>
       ) : null}
 
-      {/* SEARCH INPUT BAR */}
-      <div className="relative flex items-center rounded-xl border border-outline-variant/50 bg-white shadow-sm ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-primary/20">
-        <span className="pl-3 text-sm text-on-surface-variant">🔍</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={address}
-          onChange={(event) => onAddressChange?.(event.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleGeocodeSearch(e.target.value)
-            }
-          }}
-          placeholder="Search address, area, city (e.g. Kahuta, DHA Phase 5)…"
-          className="w-full bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-on-surface-variant/50"
-          autoComplete="off"
-        />
+      {/* SEARCH INPUT BAR WITH LIVE AUTOCOMPLETE DROPDOWN */}
+      <div ref={searchContainerRef} className="relative">
+        <div className="relative flex items-center rounded-xl border border-outline-variant/50 bg-white shadow-sm ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-primary/20">
+          <span className="pl-3.5 text-sm text-on-surface-variant">
+            {searching ? (
+              <svg className="h-4 w-4 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              '🔍'
+            )}
+          </span>
+          <input
+            type="text"
+            value={address}
+            onChange={(event) => onAddressChange?.(event.target.value)}
+            onFocus={() => {
+              if (suggestions.length > 0) setShowDropdown(true)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleGeocodeSearch(e.target.value)
+              }
+            }}
+            placeholder="Type area, street, city (e.g. Rawalpindi, Gulberg)…"
+            className="w-full bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-on-surface-variant/50"
+            autoComplete="off"
+          />
 
-        {address ? (
-          <button
-            type="button"
-            onClick={() => onAddressChange?.('')}
-            className="px-2 text-xs text-on-surface-variant hover:text-on-surface"
-            title="Clear input"
-          >
-            ✕
-          </button>
+          {address ? (
+            <button
+              type="button"
+              onClick={() => {
+                onAddressChange?.('')
+                setSuggestions([])
+                setShowDropdown(false)
+              }}
+              className="px-3 text-xs text-on-surface-variant hover:text-on-surface"
+              title="Clear input"
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+
+        {/* FLOATING LIVE SUGGESTIONS DROPDOWN */}
+        {showDropdown && suggestions.length > 0 ? (
+          <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-outline-variant/40 bg-white p-1.5 shadow-xl">
+            {suggestions.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectSuggestion(item)}
+                className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left transition hover:bg-primary/5"
+              >
+                <span className="mt-0.5 text-sm text-primary">📍</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-xs text-on-surface truncate">
+                    {item.title}
+                  </p>
+                  <p className="text-[11px] text-on-surface-variant truncate">
+                    {item.subtitle}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         ) : null}
-
-        <button
-          type="button"
-          disabled={searching || !address?.trim()}
-          onClick={() => handleGeocodeSearch(address)}
-          className="mr-1.5 flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 disabled:opacity-40"
-        >
-          {searching ? 'Finding…' : 'Search & Pin'}
-        </button>
       </div>
 
       {/* MAP CANVAS */}
@@ -342,7 +466,7 @@ export default function GoogleMapPicker({
 
         {!hasValidPoint && isLoaded ? (
           <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur-sm shadow-md">
-            Click anywhere on the map or type above to pin
+            Click anywhere on the map to place pin
           </div>
         ) : null}
       </div>
@@ -355,6 +479,175 @@ export default function GoogleMapPicker({
           <span className="font-semibold text-emerald-600">● Pin position active</span>
         </div>
       ) : null}
+
+      {/* FULL SCREEN MAP MODAL */}
+      {isFullScreen ? (
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-black/70 p-3 sm:p-6 backdrop-blur-md animate-fade-in">
+          <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+            {/* MODAL HEADER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/30 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">Select Pin Location</h3>
+                <p className="text-xs text-on-surface-variant">
+                  Search an area or click and drag the pin to your exact spot
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={locating}
+                  onClick={useCurrentLocation}
+                  className="flex items-center gap-1.5 rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs font-bold text-on-surface shadow-sm hover:bg-surface-container"
+                >
+                  📍 My Location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFullScreen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-container text-on-surface hover:bg-outline-variant/30"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* MODAL SEARCH BAR */}
+            <div className="px-6 pt-4 pb-2">
+              <div ref={fullSearchContainerRef} className="relative">
+                <div className="flex items-center rounded-xl border border-outline-variant/50 bg-surface-container-low px-3 py-2.5 shadow-sm ring-1 ring-black/5 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20">
+                  <span className="pr-2 text-sm text-on-surface-variant">🔍</span>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => onAddressChange?.(e.target.value)}
+                    onFocus={() => {
+                      if (suggestions.length > 0) setShowDropdown(true)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleGeocodeSearch(e.target.value)
+                      }
+                    }}
+                    placeholder="Type area, city, road (e.g. Rawalpindi Saddar, DHA, Gulberg)…"
+                    className="w-full bg-transparent text-sm outline-none"
+                    autoComplete="off"
+                  />
+                  {address ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddressChange?.('')
+                        setSuggestions([])
+                        setShowDropdown(false)
+                      }}
+                      className="px-2 text-xs text-on-surface-variant hover:text-on-surface"
+                    >
+                      ✕
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* MODAL AUTOCOMPLETE DROPDOWN */}
+                {showDropdown && suggestions.length > 0 ? (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-outline-variant/40 bg-white p-2 shadow-2xl">
+                    {suggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(item)}
+                        className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-primary/5"
+                      >
+                        <span className="mt-0.5 text-sm text-primary">📍</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-xs text-on-surface truncate">
+                            {item.title}
+                          </p>
+                          <p className="text-[11px] text-on-surface-variant truncate">
+                            {item.subtitle}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* FULL MAP CANVAS */}
+            <div className="relative flex-1 min-h-0">
+              {isLoaded ? (
+                <GoogleMap
+                  mapContainerStyle={{ width: '100%', height: '100%' }}
+                  center={center}
+                  zoom={hasValidPoint ? 16 : 12}
+                  onLoad={setFullMap}
+                  onUnmount={() => setFullMap(null)}
+                  onClick={handleMapClick}
+                  options={{
+                    streetViewControl: true,
+                    mapTypeControl: true,
+                    fullscreenControl: false,
+                    zoomControl: true,
+                  }}
+                >
+                  {hasValidPoint ? (
+                    <MarkerF
+                      position={value}
+                      draggable
+                      onDragEnd={handleMapClick}
+                      animation={window.google?.maps?.Animation?.DROP}
+                    />
+                  ) : null}
+                </GoogleMap>
+              ) : null}
+
+              {!hasValidPoint ? (
+                <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm">
+                  Click anywhere on the map to place pin
+                </div>
+              ) : null}
+            </div>
+
+            {/* MODAL FOOTER */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant/30 bg-white px-6 py-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                  Selected Location
+                </p>
+                <p className="text-sm font-semibold text-on-surface truncate">
+                  {address || 'No address pinned yet'}
+                </p>
+                {hasValidPoint ? (
+                  <p className="text-xs text-emerald-600 font-medium">
+                    ● Coordinates: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsFullScreen(false)}
+                  className="rounded-xl border border-outline-variant/40 px-5 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFullScreen(false)}
+                  disabled={!hasValidPoint}
+                  className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 hover:opacity-95 disabled:opacity-40"
+                >
+                  ✓ Confirm & Pin Location
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
+
