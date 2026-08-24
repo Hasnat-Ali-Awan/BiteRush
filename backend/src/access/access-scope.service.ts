@@ -43,7 +43,9 @@ export class AccessScopeService {
     }
 
     if (user.role === 'main_manager') {
-      const group = await this.groupModel.findOne({ ownerId: user.userId }).lean();
+      const group = await this.groupModel
+        .findOne({ ownerId: user.userId })
+        .lean();
       if (!group) return [];
       const branches = await this.restaurantModel
         .find({ groupId: group._id })
@@ -74,21 +76,26 @@ export class AccessScopeService {
   async assertOrderAccess(
     user: ScopeUser,
     order: {
-      restaurantId: unknown;
-      riderId?: unknown;
-      customerId?: unknown;
+      restaurantId: string | { toString(): string };
+      riderId?: string | { toString(): string } | null;
+      customerId?: string | { toString(): string } | null;
     },
   ) {
-    const restaurantId = String(order.restaurantId);
+    const restaurantId =
+      order.restaurantId != null ? order.restaurantId.toString() : '';
     if (user.role === 'rider') {
-      if (String(order.riderId || '') !== user.userId) {
+      const orderRiderId =
+        order.riderId != null ? order.riderId.toString() : '';
+      if (orderRiderId !== user.userId) {
         throw new ForbiddenException('This delivery is not assigned to you');
       }
       return restaurantId;
     }
 
     if (user.role === 'customer') {
-      if (String(order.customerId || '') !== user.userId) {
+      const orderCustomerId =
+        order.customerId != null ? order.customerId.toString() : '';
+      if (orderCustomerId !== user.userId) {
         throw new ForbiddenException('You cannot access this order');
       }
       return restaurantId;
@@ -110,7 +117,8 @@ export class AccessScopeService {
   }
 
   buildRestaurantFilter(ids: string[]) {
-    if (!ids.length) return { _id: new Types.ObjectId('000000000000000000000000') };
+    if (!ids.length)
+      return { _id: new Types.ObjectId('000000000000000000000000') };
     return { _id: { $in: ids.map((id) => new Types.ObjectId(id)) } };
   }
 }

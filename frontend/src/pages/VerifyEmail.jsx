@@ -29,6 +29,25 @@ export default function VerifyEmail() {
     return () => clearInterval(timer)
   }, [countdown])
 
+  const handleAutoVerify = useCallback(
+    async (token) => {
+      setLoading(true)
+      setError('')
+      try {
+        const user = await verifyEmail({ token, email: emailFromUrl })
+        setSuccess('Email verified successfully! Redirecting...')
+        setTimeout(() => {
+          navigate(homePathForRole(user.role), { replace: true })
+        }, 1200)
+      } catch (err) {
+        setError(err.message || 'Invalid or expired verification link.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [verifyEmail, emailFromUrl, navigate],
+  )
+
   // If token is present in URL, auto verify once
   const autoVerified = useRef(false)
   useEffect(() => {
@@ -36,23 +55,7 @@ export default function VerifyEmail() {
       autoVerified.current = true
       handleAutoVerify(tokenFromUrl)
     }
-  }, [tokenFromUrl])
-
-  async function handleAutoVerify(token) {
-    setLoading(true)
-    setError('')
-    try {
-      const user = await verifyEmail({ token, email: emailFromUrl })
-      setSuccess('Email verified successfully! Redirecting...')
-      setTimeout(() => {
-        navigate(homePathForRole(user.role), { replace: true })
-      }, 1200)
-    } catch (err) {
-      setError(err.message || 'Invalid or expired verification link.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [tokenFromUrl, handleAutoVerify])
 
   async function handleSubmit(event) {
     event.preventDefault()

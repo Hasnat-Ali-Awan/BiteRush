@@ -7,7 +7,9 @@ import { AccessModule } from '../access/access.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: MenuItem.name, schema: MenuItemSchema }]),
+    MongooseModule.forFeature([
+      { name: MenuItem.name, schema: MenuItemSchema },
+    ]),
     AccessModule,
   ],
   controllers: [MenuController],

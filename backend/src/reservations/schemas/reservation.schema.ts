@@ -5,7 +5,12 @@ export type ReservationDocument = HydratedDocument<Reservation>;
 
 @Schema({ timestamps: true })
 export class Reservation {
-  @Prop({ type: Types.ObjectId, ref: 'Restaurant', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Restaurant',
+    required: true,
+    index: true,
+  })
   restaurantId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -25,7 +30,14 @@ export class Reservation {
 
   @Prop({
     required: true,
-    enum: ['pending', 'confirmed', 'rejected', 'seated', 'completed', 'cancelled'],
+    enum: [
+      'pending',
+      'confirmed',
+      'rejected',
+      'seated',
+      'completed',
+      'cancelled',
+    ],
     default: 'pending',
   })
   status: string;
@@ -35,4 +47,3 @@ export const ReservationSchema = SchemaFactory.createForClass(Reservation);
 ReservationSchema.index({ restaurantId: 1, status: 1, reservedAt: 1 });
 ReservationSchema.index({ restaurantId: 1, reservedAt: -1 });
 ReservationSchema.index({ phone: 1 });
-

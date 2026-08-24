@@ -18,7 +18,10 @@ export class RestaurantsService {
     const cached = this.cache.get<any[]>('restaurants:all');
     if (cached) return cached;
 
-    const restaurants = await this.restaurantModel.find().sort({ name: 1 }).lean();
+    const restaurants = await this.restaurantModel
+      .find()
+      .sort({ name: 1 })
+      .lean();
     const result = restaurants.map((restaurant) => this.map(restaurant));
     this.cache.set('restaurants:all', result, 5);
     return result;

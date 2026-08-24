@@ -50,7 +50,12 @@ export class DashboardService {
     }
 
     const scopedIds = branchId
-      ? [await this.accessScope.assertRestaurantAccess({ userId, role }, branchId)]
+      ? [
+          await this.accessScope.assertRestaurantAccess(
+            { userId, role },
+            branchId,
+          ),
+        ]
       : restaurantIds;
 
     const branches = await this.restaurantModel

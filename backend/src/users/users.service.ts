@@ -107,11 +107,7 @@ export class UsersService {
 
   async setRestaurantId(userId: string, restaurantId: string) {
     const user = await this.userModel
-      .findByIdAndUpdate(
-        userId,
-        { restaurantId },
-        { returnDocument: 'after' },
-      )
+      .findByIdAndUpdate(userId, { restaurantId }, { returnDocument: 'after' })
       .lean();
     if (!user) throw new NotFoundException('User not found');
     return user;

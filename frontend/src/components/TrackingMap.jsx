@@ -56,6 +56,33 @@ export default function TrackingMap({ restaurant, customer, rider, status }) {
     libraries: LIBRARIES,
   })
 
+  const shouldShowRoute = Boolean(origin && destination)
+
+  const directionsOptions = useMemo(() => {
+    if (!shouldShowRoute || !origin || !destination) return null
+    // Only show directions after rider is assigned/active, so users aren't confused.
+    const activeEnough =
+      status === 'assigned' ||
+      status === 'picked_up' ||
+      status === 'on_the_way' ||
+      status === 'delivered'
+    const allowRoute = activeEnough || status === 'ready'
+    if (!allowRoute) return null
+    return {
+      origin,
+      destination,
+      travelMode: 'DRIVING',
+    }
+  }, [shouldShowRoute, origin, destination, status])
+
+  useEffect(() => {
+    if (!directionsOptions) {
+      setDirections(null)
+      setRouteEta(null)
+      setRouteDistance(null)
+    }
+  }, [directionsOptions])
+
   if (!apiKey) {
     return (
       <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 text-sm text-on-surface-variant">
@@ -71,33 +98,6 @@ export default function TrackingMap({ restaurant, customer, rider, status }) {
       </div>
     )
   }
-
-  const shouldShowRoute = Boolean(origin && destination)
-
-  const directionsOptions = useMemo(() => {
-    if (!shouldShowRoute) return null
-    // Only show directions after rider is assigned/active, so users aren't confused.
-    const activeEnough =
-      status === 'assigned' ||
-      status === 'picked_up' ||
-      status === 'on_the_way' ||
-      status === 'delivered'
-    const allowRoute = activeEnough || status === 'ready'
-    if (!allowRoute) return null
-    return {
-      origin,
-      destination,
-      travelMode: 'DRIVING',
-    }
-  }, [shouldShowRoute, origin, destination, status, riderValid])
-
-  useEffect(() => {
-    if (!directionsOptions) {
-      setDirections(null)
-      setRouteEta(null)
-      setRouteDistance(null)
-    }
-  }, [directionsOptions])
 
   return (
     <div className="overflow-hidden rounded-2xl border border-outline-variant/30">

@@ -16,7 +16,12 @@ const LocationPointSchema = SchemaFactory.createForClass(LocationPoint);
 
 @Schema({ timestamps: true })
 export class Restaurant {
-  @Prop({ type: Types.ObjectId, ref: 'RestaurantGroup', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'RestaurantGroup',
+    required: true,
+    index: true,
+  })
   groupId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -58,4 +63,3 @@ RestaurantSchema.index({ groupId: 1, branch: 1 });
 RestaurantSchema.index({ branchManagerId: 1 });
 RestaurantSchema.index({ cuisine: 1 });
 RestaurantSchema.index({ name: 1 });
-

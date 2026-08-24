@@ -74,4 +74,3 @@ export class ResetPasswordDto {
   @MinLength(8)
   newPassword: string;
 }
-

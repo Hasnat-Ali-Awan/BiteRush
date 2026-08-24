@@ -26,7 +26,12 @@ const MenuExtraSchema = SchemaFactory.createForClass(MenuExtra);
 
 @Schema({ timestamps: true })
 export class MenuItem {
-  @Prop({ type: Types.ObjectId, ref: 'Restaurant', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Restaurant',
+    required: true,
+    index: true,
+  })
   restaurantId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true, index: true })
@@ -66,4 +71,3 @@ MenuItemSchema.index({ restaurantId: 1, isAvailable: 1 });
 MenuItemSchema.index({ restaurantId: 1, orderCount: -1 });
 MenuItemSchema.index({ restaurantId: 1, createdAt: -1 });
 MenuItemSchema.index({ restaurantId: 1, name: 'text' });
-

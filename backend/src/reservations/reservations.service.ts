@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Reservation, ReservationDocument } from './schemas/reservation.schema';
 import {
-  Reservation,
-  ReservationDocument,
-} from './schemas/reservation.schema';
-import { UpdateReservationStatusDto, CreateReservationDto } from './dto/reservation.dto';
+  UpdateReservationStatusDto,
+  CreateReservationDto,
+} from './dto/reservation.dto';
 
 @Injectable()
 export class ReservationsService {

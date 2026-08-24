@@ -28,7 +28,10 @@ export class RestaurantGroupsController {
   constructor(private readonly groupsService: RestaurantGroupsService) {}
 
   @Post()
-  createGroup(@Body() dto: CreateRestaurantGroupDto, @CurrentUser() user: AuthUser) {
+  createGroup(
+    @Body() dto: CreateRestaurantGroupDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.groupsService.createGroup(dto, user.userId);
   }
 

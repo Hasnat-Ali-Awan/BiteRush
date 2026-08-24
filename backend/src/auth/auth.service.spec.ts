@@ -6,7 +6,12 @@ import { MailService } from '../mail/mail.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Restaurant } from '../restaurants/schemas/restaurant.schema';
 import { RestaurantGroup } from '../restaurant-groups/schemas/restaurant-group.schema';
-import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,13 +20,23 @@ describe('AuthService', () => {
   let jwtService: Partial<Record<keyof JwtService, jest.Mock>>;
 
   const mockRestaurantModel = {
-    findById: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
-    find: jest.fn().mockReturnValue({ sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }) }),
+    findById: jest
+      .fn()
+      .mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    find: jest.fn().mockReturnValue({
+      sort: jest
+        .fn()
+        .mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    }),
   };
 
   const mockGroupModel = {
-    findById: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
-    findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    findById: jest
+      .fn()
+      .mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    findOne: jest
+      .fn()
+      .mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
   };
 
   beforeEach(async () => {
@@ -53,8 +68,14 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: MailService, useValue: mailService },
         { provide: JwtService, useValue: jwtService },
-        { provide: getModelToken(Restaurant.name), useValue: mockRestaurantModel },
-        { provide: getModelToken(RestaurantGroup.name), useValue: mockGroupModel },
+        {
+          provide: getModelToken(Restaurant.name),
+          useValue: mockRestaurantModel,
+        },
+        {
+          provide: getModelToken(RestaurantGroup.name),
+          useValue: mockGroupModel,
+        },
       ],
     }).compile();
 
@@ -115,7 +136,6 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should throw UnauthorizedException if email is not verified', async () => {
-      const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash('password123', 10);
       usersService.findByEmail!.mockResolvedValue({
         _id: 'user123',
@@ -181,7 +201,9 @@ describe('AuthService', () => {
       usersService.findByEmail!.mockResolvedValue(user);
       usersService.setResetPasswordData!.mockResolvedValue(user);
 
-      const result = await service.forgotPassword({ email: 'john@example.com' });
+      const result = await service.forgotPassword({
+        email: 'john@example.com',
+      });
 
       expect(usersService.setResetPasswordData).toHaveBeenCalledWith(
         'user123',
@@ -191,7 +213,9 @@ describe('AuthService', () => {
         }),
       );
       expect(mailService.sendPasswordResetEmail).toHaveBeenCalled();
-      expect(result.message).toContain('password reset instructions have been sent');
+      expect(result.message).toContain(
+        'password reset instructions have been sent',
+      );
     });
 
     it('should reset password with valid token and clear reset data', async () => {

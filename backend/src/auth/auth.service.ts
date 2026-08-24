@@ -276,20 +276,19 @@ export class AuthService {
   }
 
   private async issue(user: {
-    _id: unknown;
+    _id: string | { toString(): string };
     name: string;
     email: string;
     role: UserRole;
-    restaurantId?: unknown;
-    groupId?: unknown;
+    restaurantId?: string | { toString(): string } | null;
+    groupId?: string | { toString(): string } | null;
   }) {
-    const restaurantId = user.restaurantId ? String(user.restaurantId) : null;
-    const groupId = user.groupId ? String(user.groupId) : null;
+    const restaurantId =
+      user.restaurantId != null ? user.restaurantId.toString() : null;
+    const groupId = user.groupId != null ? user.groupId.toString() : null;
 
     const [restaurant, group, branches] = await Promise.all([
-      restaurantId
-        ? this.restaurantModel.findById(restaurantId).lean()
-        : null,
+      restaurantId ? this.restaurantModel.findById(restaurantId).lean() : null,
       groupId ? this.groupModel.findById(groupId).lean() : null,
       groupId
         ? this.restaurantModel.find({ groupId }).sort({ createdAt: 1 }).lean()
@@ -298,7 +297,7 @@ export class AuthService {
               .find({
                 groupId: (
                   await this.groupModel
-                    .findOne({ ownerId: String(user._id) })
+                    .findOne({ ownerId: user._id.toString() })
                     .lean()
                 )?._id,
               })

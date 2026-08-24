@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 export default function ManagerLayout({ restaurant, setRestaurant }) {
   const { user } = useAuth()
   const [branchId, setBranchId] = useState(null)
-  const branches = user?.branches || []
+  const branches = useMemo(() => user?.branches || [], [user?.branches])
 
   const handleBranchChange = useCallback(
     (nextBranchId) => {

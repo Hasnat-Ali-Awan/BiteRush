@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AccessScopeService } from './access-scope.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
-import { Restaurant, RestaurantSchema } from '../restaurants/schemas/restaurant.schema';
+import {
+  Restaurant,
+  RestaurantSchema,
+} from '../restaurants/schemas/restaurant.schema';
 import {
   RestaurantGroup,
   RestaurantGroupSchema,

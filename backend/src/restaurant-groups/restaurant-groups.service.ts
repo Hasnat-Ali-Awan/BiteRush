@@ -27,7 +27,10 @@ import { MailService } from '../mail/mail.service';
 import { AccessScopeService } from '../access/access-scope.service';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { MenuItem, MenuItemDocument } from '../menu/schemas/menu-item.schema';
-import { Reservation, ReservationDocument } from '../reservations/schemas/reservation.schema';
+import {
+  Reservation,
+  ReservationDocument,
+} from '../reservations/schemas/reservation.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
@@ -92,16 +95,24 @@ export class RestaurantGroupsService {
     const existingBranch = await this.restaurantModel.findOne({
       groupId: group._id,
       branch: {
-        $regex: new RegExp(`^${branchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        $regex: new RegExp(
+          `^${branchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+          'i',
+        ),
       },
     });
     if (existingBranch) {
-      throw new ConflictException(`A branch named "${branchName}" already exists in your brand.`);
+      throw new ConflictException(
+        `A branch named "${branchName}" already exists in your brand.`,
+      );
     }
 
     // Validate location if provided
-    let location = dto.location ?? null;
-    if (location && (typeof location.lat === 'number' || typeof location.lng === 'number')) {
+    const location = dto.location ?? null;
+    if (
+      location &&
+      (typeof location.lat === 'number' || typeof location.lng === 'number')
+    ) {
       if (
         !Number.isFinite(location.lat) ||
         !Number.isFinite(location.lng) ||
@@ -110,7 +121,9 @@ export class RestaurantGroupsService {
         location.lng < -180 ||
         location.lng > 180
       ) {
-        throw new BadRequestException('Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.');
+        throw new BadRequestException(
+          'Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.',
+        );
       }
     }
 
@@ -149,11 +162,16 @@ export class RestaurantGroupsService {
           groupId: group._id,
           _id: { $ne: branch._id },
           branch: {
-            $regex: new RegExp(`^${nextBranchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+            $regex: new RegExp(
+              `^${nextBranchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+              'i',
+            ),
           },
         });
         if (existingBranch) {
-          throw new ConflictException(`A branch named "${nextBranchName}" already exists in your brand.`);
+          throw new ConflictException(
+            `A branch named "${nextBranchName}" already exists in your brand.`,
+          );
         }
       }
       branch.branch = nextBranchName;
@@ -161,7 +179,8 @@ export class RestaurantGroupsService {
 
     if (dto.address !== undefined) branch.address = dto.address.trim();
     if (dto.eta !== undefined) branch.eta = dto.eta.trim();
-    if (dto.deliveryFee !== undefined) branch.deliveryFee = Number(dto.deliveryFee);
+    if (dto.deliveryFee !== undefined)
+      branch.deliveryFee = Number(dto.deliveryFee);
     if (dto.minOrder !== undefined) branch.minOrder = Number(dto.minOrder);
     if (dto.heroImage !== undefined) branch.heroImage = dto.heroImage.trim();
 
@@ -187,7 +206,7 @@ export class RestaurantGroupsService {
   }
 
   async deleteBranch(groupId: string, branchId: string, ownerId: string) {
-    const group = await this.accessScope.assertGroupOwner(ownerId, groupId);
+    await this.accessScope.assertGroupOwner(ownerId, groupId);
     const branch = await this.restaurantModel.findById(branchId);
     if (!branch || String(branch.groupId) !== groupId) {
       throw new NotFoundException('Branch not found in your brand');

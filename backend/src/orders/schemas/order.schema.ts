@@ -46,7 +46,12 @@ const OrderLocationPointSchema =
 
 @Schema({ timestamps: true })
 export class Order {
-  @Prop({ type: Types.ObjectId, ref: 'Restaurant', required: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Restaurant',
+    required: true,
+    index: true,
+  })
   restaurantId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
@@ -97,4 +102,3 @@ OrderSchema.index({ restaurantId: 1, status: 1, riderId: 1 });
 OrderSchema.index({ riderId: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ customerId: 1, createdAt: -1 });
 OrderSchema.index({ createdAt: -1 });
-

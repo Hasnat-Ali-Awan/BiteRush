@@ -118,9 +118,7 @@ export class MenuService {
 
   private mapItem(item: any) {
     const category = item.categoryId as
-      | { _id: Types.ObjectId; name: string }
-      | Types.ObjectId
-      | undefined;
+      { _id: Types.ObjectId; name: string } | Types.ObjectId | undefined;
 
     const categoryId =
       category && typeof category === 'object' && 'name' in category

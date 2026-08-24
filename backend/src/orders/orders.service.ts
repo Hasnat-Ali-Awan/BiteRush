@@ -23,7 +23,9 @@ export class OrdersService {
       0,
     );
     const orderNumber = `BR-${Date.now().toString().slice(-8)}`;
-    const restaurant = await this.restaurantModel.findById(dto.restaurantId).lean();
+    const restaurant = await this.restaurantModel
+      .findById(dto.restaurantId)
+      .lean();
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
     const created = await this.orderModel.create({
@@ -50,14 +52,20 @@ export class OrdersService {
       filter.restaurantId = { $in: restaurantIds };
     }
     if (status) filter.status = status;
-    const orders = await this.orderModel.find(filter).sort({ createdAt: -1 }).lean();
+    const orders = await this.orderModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
     return orders.map((order) => this.mapOrder(order));
   }
 
   async findForRider(riderId: string, status?: OrderStatus) {
     const filter: Record<string, unknown> = { riderId };
     if (status) filter.status = status;
-    const orders = await this.orderModel.find(filter).sort({ createdAt: -1 }).lean();
+    const orders = await this.orderModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
     return orders.map((order) => this.mapOrder(order));
   }
 
@@ -72,7 +80,9 @@ export class OrdersService {
   async findOne(id: string) {
     const order = await this.orderModel.findById(id).lean();
     if (!order) throw new NotFoundException('Order not found');
-    const restaurant = await this.restaurantModel.findById(order.restaurantId).lean();
+    const restaurant = await this.restaurantModel
+      .findById(order.restaurantId)
+      .lean();
     return this.mapOrder(order, restaurant);
   }
 

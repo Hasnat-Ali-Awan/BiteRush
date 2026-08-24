@@ -158,20 +158,23 @@ export default function GoogleMapPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  function handleSelectSuggestion(suggestion) {
-    setShowDropdown(false)
-    setSuggestions([])
-    setGeoError('')
-    onAddressChange?.(suggestion.displayName || suggestion.title)
+  const handleSelectSuggestion = useCallback(
+    (suggestion) => {
+      setShowDropdown(false)
+      setSuggestions([])
+      setGeoError('')
+      onAddressChange?.(suggestion.displayName || suggestion.title)
 
-    const next = { lat: suggestion.lat, lng: suggestion.lng }
-    onChange?.(next)
+      const next = { lat: suggestion.lat, lng: suggestion.lng }
+      onChange?.(next)
 
-    map?.panTo(next)
-    map?.setZoom(16)
-    fullMap?.panTo(next)
-    fullMap?.setZoom(16)
-  }
+      map?.panTo(next)
+      map?.setZoom(16)
+      fullMap?.panTo(next)
+      fullMap?.setZoom(16)
+    },
+    [map, fullMap, onChange, onAddressChange],
+  )
 
   // Geocode on Enter
   const handleGeocodeSearch = useCallback(
@@ -218,7 +221,7 @@ export default function GoogleMapPicker({
         setSearching(false)
       }
     },
-    [address, map, fullMap, suggestions, onChange, onAddressChange],
+    [address, map, fullMap, suggestions, handleSelectSuggestion, onChange, onAddressChange],
   )
 
   function useCurrentLocation() {
