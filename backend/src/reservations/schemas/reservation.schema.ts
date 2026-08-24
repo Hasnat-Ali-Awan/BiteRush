@@ -32,3 +32,7 @@ export class Reservation {
 }
 
 export const ReservationSchema = SchemaFactory.createForClass(Reservation);
+ReservationSchema.index({ restaurantId: 1, status: 1, reservedAt: 1 });
+ReservationSchema.index({ restaurantId: 1, reservedAt: -1 });
+ReservationSchema.index({ phone: 1 });
+

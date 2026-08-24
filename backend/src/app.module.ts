@@ -17,14 +17,23 @@ import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
 import { RidersModule } from './riders/riders.module';
 
+import { CacheModule } from './common/cache/cache.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.getOrThrow<string>('MONGODB_URI'),
+        maxPoolSize: 200,
+        minPoolSize: 20,
+        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 5000,
+        maxIdleTimeMS: 30000,
+        family: 4,
       }),
     }),
     MailModule,

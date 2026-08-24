@@ -3,21 +3,30 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Category, CategoryDocument } from './schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from '../menu/dto/menu.dto';
+import { MemoryCacheService } from '../common/cache/memory-cache.service';
 
 @Injectable()
 export class CategoriesService {
   constructor(
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
+    private readonly cache: MemoryCacheService,
   ) {}
 
-  create(dto: CreateCategoryDto) {
-    return this.categoryModel.create(dto).then((category) => this.map(category.toObject()));
+  async create(dto: CreateCategoryDto) {
+    this.cache.del('categories:all');
+    const category = await this.categoryModel.create(dto);
+    return this.map(category.toObject());
   }
 
   async findAll() {
+    const cached = this.cache.get<any[]>('categories:all');
+    if (cached) return cached;
+
     const categories = await this.categoryModel.find().sort({ name: 1 }).lean();
-    return categories.map((category) => this.map(category));
+    const result = categories.map((category) => this.map(category));
+    this.cache.set('categories:all', result, 10);
+    return result;
   }
 
   async update(id: string, dto: UpdateCategoryDto) {

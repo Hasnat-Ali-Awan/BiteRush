@@ -65,3 +65,9 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index({ role: 1 });
+UserSchema.index({ groupId: 1 });
+UserSchema.index({ restaurantId: 1 });
+UserSchema.index({ emailVerificationToken: 1 });
+UserSchema.index({ resetPasswordToken: 1 });
+

@@ -55,3 +55,7 @@ export class Restaurant {
 
 export const RestaurantSchema = SchemaFactory.createForClass(Restaurant);
 RestaurantSchema.index({ groupId: 1, branch: 1 });
+RestaurantSchema.index({ branchManagerId: 1 });
+RestaurantSchema.index({ cuisine: 1 });
+RestaurantSchema.index({ name: 1 });
+

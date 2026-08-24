@@ -7,15 +7,18 @@ import {
   ToggleAvailabilityDto,
   UpdateMenuItemDto,
 } from './dto/menu.dto';
+import { MemoryCacheService } from '../common/cache/memory-cache.service';
 
 @Injectable()
 export class MenuService {
   constructor(
     @InjectModel(MenuItem.name)
     private readonly menuModel: Model<MenuItemDocument>,
+    private readonly cache: MemoryCacheService,
   ) {}
 
   async create(dto: CreateMenuItemDto) {
+    this.cache.delByPrefix('menu:');
     const created = await this.menuModel.create({
       ...dto,
       restaurantId: new Types.ObjectId(dto.restaurantId),
@@ -40,6 +43,10 @@ export class MenuService {
     available?: string;
     search?: string;
   }) {
+    const cacheKey = `menu:${filters.restaurantId ?? ''}:${filters.categoryId ?? ''}:${filters.available ?? ''}:${filters.search ?? ''}`;
+    const cached = this.cache.get<any[]>(cacheKey);
+    if (cached) return cached;
+
     const query: Record<string, unknown> = {};
     if (filters.restaurantId) {
       query.restaurantId = new Types.ObjectId(filters.restaurantId);
@@ -59,7 +66,9 @@ export class MenuService {
       .sort({ createdAt: -1 })
       .lean();
 
-    return items.map((item) => this.mapItem(item));
+    const result = items.map((item) => this.mapItem(item));
+    this.cache.set(cacheKey, result, 5);
+    return result;
   }
 
   async findOne(id: string) {
@@ -72,6 +81,7 @@ export class MenuService {
   }
 
   async update(id: string, dto: UpdateMenuItemDto) {
+    this.cache.delByPrefix('menu:');
     const payload: Record<string, unknown> = { ...dto };
     if (dto.categoryId) {
       payload.categoryId = new Types.ObjectId(dto.categoryId);
@@ -86,6 +96,7 @@ export class MenuService {
   }
 
   async toggleAvailability(id: string, dto: ToggleAvailabilityDto) {
+    this.cache.delByPrefix('menu:');
     const item = await this.menuModel
       .findByIdAndUpdate(
         id,
@@ -99,6 +110,7 @@ export class MenuService {
   }
 
   async remove(id: string) {
+    this.cache.delByPrefix('menu:');
     const item = await this.menuModel.findByIdAndDelete(id).lean();
     if (!item) throw new NotFoundException('Menu item not found');
     return { deleted: true, id };

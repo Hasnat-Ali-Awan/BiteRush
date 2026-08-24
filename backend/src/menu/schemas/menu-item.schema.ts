@@ -61,4 +61,9 @@ export class MenuItem {
 }
 
 export const MenuItemSchema = SchemaFactory.createForClass(MenuItem);
+MenuItemSchema.index({ restaurantId: 1, categoryId: 1, isAvailable: 1 });
+MenuItemSchema.index({ restaurantId: 1, isAvailable: 1 });
+MenuItemSchema.index({ restaurantId: 1, orderCount: -1 });
+MenuItemSchema.index({ restaurantId: 1, createdAt: -1 });
 MenuItemSchema.index({ restaurantId: 1, name: 'text' });
+

@@ -10,25 +10,67 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY)
 }
 
-async function request(path, options = {}) {
-  const token = getToken()
-  const res = await fetch(`${BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-    ...options,
-  })
+const clientCache = new Map()
 
-  const json = await res.json().catch(() => ({}))
-  if (!res.ok || json.success === false) {
-    const raw =
-      json?.error?.message || json?.message || `Request failed (${res.status})`
-    const message = Array.isArray(raw) ? raw.join(', ') : raw
-    throw new Error(message)
+export function invalidateClientCache(prefix = '') {
+  if (!prefix) {
+    clientCache.clear()
+    return
   }
-  return json.data ?? json
+  for (const key of clientCache.keys()) {
+    if (key.startsWith(prefix)) {
+      clientCache.delete(key)
+    }
+  }
+}
+
+async function request(path, options = {}) {
+  const isGet = !options.method || options.method === 'GET'
+  const cacheKey = `${path}`
+
+  // Instant 0ms response from RAM if cached within 15 seconds
+  if (isGet && clientCache.has(cacheKey)) {
+    const entry = clientCache.get(cacheKey)
+    if (Date.now() - entry.timestamp < 15000) {
+      return entry.data
+    }
+  }
+
+  const token = getToken()
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+      ...options,
+    })
+
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || json.success === false) {
+      const raw =
+        json?.error?.message || json?.message || `Request failed (${res.status})`
+      const message = Array.isArray(raw) ? raw.join(', ') : raw
+      throw new Error(message)
+    }
+
+    const data = json.data ?? json
+
+    if (isGet) {
+      clientCache.set(cacheKey, { data, timestamp: Date.now() })
+    } else {
+      invalidateClientCache()
+    }
+
+    return data
+  } catch (err) {
+    // If on slow/offline network, fallback to cached data if available
+    if (isGet && clientCache.has(cacheKey)) {
+      return clientCache.get(cacheKey).data
+    }
+    throw err
+  }
 }
 
 function toQuery(params = {}) {
