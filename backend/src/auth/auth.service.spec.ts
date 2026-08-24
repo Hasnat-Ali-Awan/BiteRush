@@ -50,6 +50,8 @@ describe('AuthService', () => {
       markEmailVerified: jest.fn(),
       setResetPasswordData: jest.fn(),
       updatePasswordAndClearReset: jest.fn(),
+      findByGoogleId: jest.fn(),
+      linkGoogleAccount: jest.fn(),
     };
 
     mailService = {
