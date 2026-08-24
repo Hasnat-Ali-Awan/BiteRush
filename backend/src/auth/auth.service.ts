@@ -31,6 +31,14 @@ import { MailService } from '../mail/mail.service';
 import { SELF_REGISTER_ROLES } from '../users/schemas/user.schema';
 import type { UserRole } from '../users/schemas/user.schema';
 
+interface GoogleTokenPayload {
+  email?: string;
+  name?: string;
+  sub?: string;
+  picture?: string;
+  email_verified?: string | boolean;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -116,13 +124,7 @@ export class AuthService {
       throw new BadRequestException('Google credential token is required');
     }
 
-    let payload: {
-      email?: string;
-      name?: string;
-      sub?: string;
-      picture?: string;
-      email_verified?: string | boolean;
-    } | null = null;
+    let payload: GoogleTokenPayload | null = null;
 
     // 1. Try to verify via Google's tokeninfo API
     try {
@@ -130,7 +132,7 @@ export class AuthService {
         `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
       );
       if (res.ok) {
-        payload = (await res.json()) as typeof payload;
+        payload = (await res.json()) as GoogleTokenPayload;
       }
     } catch {
       payload = null;
@@ -142,21 +144,22 @@ export class AuthService {
         const parts = credential.split('.');
         if (parts.length === 3) {
           const raw = Buffer.from(parts[1], 'base64').toString('utf-8');
-          payload = JSON.parse(raw) as typeof payload;
+          payload = JSON.parse(raw) as GoogleTokenPayload;
         }
       } catch {
         // ignore
       }
     }
 
-    if (!payload?.email) {
+    const validPayload = payload;
+    if (!validPayload?.email) {
       throw new UnauthorizedException('Invalid Google authentication token');
     }
 
-    const email = payload.email.toLowerCase().trim();
-    const name = payload.name || email.split('@')[0];
-    const googleId = payload.sub || '';
-    const avatarUrl = payload.picture || null;
+    const email = validPayload.email.toLowerCase().trim();
+    const name = validPayload.name || email.split('@')[0];
+    const googleId = validPayload.sub || '';
+    const avatarUrl = validPayload.picture || null;
 
     let user = await this.usersService.findByEmail(email);
 

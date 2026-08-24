@@ -247,6 +247,16 @@ describe('AuthService', () => {
   });
 
   describe('googleAuth', () => {
+    let fetchSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      fetchSpy = jest.spyOn(global, 'fetch');
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
+
     it('should create new user and issue token if user does not exist', async () => {
       const mockPayload = {
         email: 'googleuser@example.com',
@@ -254,13 +264,13 @@ describe('AuthService', () => {
         sub: 'google-sub-123',
         picture: 'https://avatar.url',
       };
-      const b64Header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString(
-        'base64',
-      );
-      const b64Payload = Buffer.from(JSON.stringify(mockPayload)).toString(
-        'base64',
-      );
-      const token = `${b64Header}.${b64Payload}.signature`;
+
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockPayload),
+      } as any);
+
+      const token = 'mock-google-id-token';
 
       usersService.findByEmail!.mockResolvedValue(null);
       usersService.create!.mockResolvedValue({
@@ -294,13 +304,13 @@ describe('AuthService', () => {
         name: 'Existing User',
         sub: 'google-sub-456',
       };
-      const b64Header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString(
-        'base64',
-      );
-      const b64Payload = Buffer.from(JSON.stringify(mockPayload)).toString(
-        'base64',
-      );
-      const token = `${b64Header}.${b64Payload}.signature`;
+
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockPayload),
+      } as any);
+
+      const token = 'mock-google-id-token';
 
       const existingUser = {
         _id: 'existing-user-id',
