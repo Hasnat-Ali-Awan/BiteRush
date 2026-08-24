@@ -21,10 +21,12 @@ export class UsersService {
   create(data: {
     name: string;
     email: string;
-    passwordHash: string;
+    passwordHash?: string | null;
     role: UserRole;
     restaurantId?: string | null;
     groupId?: string | null;
+    googleId?: string | null;
+    avatarUrl?: string | null;
     isEmailVerified?: boolean;
     emailVerificationToken?: string | null;
     emailVerificationCode?: string | null;
@@ -33,15 +35,37 @@ export class UsersService {
     return this.userModel.create({
       name: data.name.trim(),
       email: data.email.toLowerCase().trim(),
-      passwordHash: data.passwordHash,
+      passwordHash: data.passwordHash ?? null,
       role: data.role,
       restaurantId: data.restaurantId ?? null,
       groupId: data.groupId ?? null,
+      googleId: data.googleId ?? null,
+      avatarUrl: data.avatarUrl ?? null,
       isEmailVerified: data.isEmailVerified ?? false,
       emailVerificationToken: data.emailVerificationToken ?? null,
       emailVerificationCode: data.emailVerificationCode ?? null,
       emailVerificationExpires: data.emailVerificationExpires ?? null,
     });
+  }
+
+  findByGoogleId(googleId: string) {
+    return this.userModel.findOne({ googleId });
+  }
+
+  async linkGoogleAccount(
+    userId: string,
+    googleId: string,
+    avatarUrl?: string | null,
+  ) {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      {
+        googleId,
+        isEmailVerified: true,
+        ...(avatarUrl ? { avatarUrl } : {}),
+      },
+      { returnDocument: 'after' },
+    );
   }
 
   findByVerificationToken(token: string) {

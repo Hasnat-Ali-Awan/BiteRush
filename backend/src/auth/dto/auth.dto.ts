@@ -74,3 +74,12 @@ export class ResetPasswordDto {
   @MinLength(8)
   newPassword: string;
 }
+
+export class GoogleAuthDto {
+  @IsString()
+  credential: string;
+
+  @IsOptional()
+  @IsIn(SELF_REGISTER_ROLES)
+  role?: UserRole;
+}

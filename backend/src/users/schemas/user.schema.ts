@@ -28,11 +28,17 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true })
-  passwordHash: string;
+  @Prop({ type: String, default: null })
+  passwordHash: string | null;
 
   @Prop({ required: true, enum: USER_ROLES, type: String })
   role: UserRole;
+
+  @Prop({ type: String, default: null })
+  googleId: string | null;
+
+  @Prop({ type: String, default: null })
+  avatarUrl: string | null;
 
   /** Branch this user manages or delivers for */
   @Prop({ type: Types.ObjectId, ref: 'Restaurant', default: null })
@@ -68,5 +74,6 @@ export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.index({ role: 1 });
 UserSchema.index({ groupId: 1 });
 UserSchema.index({ restaurantId: 1 });
+UserSchema.index({ googleId: 1 });
 UserSchema.index({ emailVerificationToken: 1 });
 UserSchema.index({ resetPasswordToken: 1 });

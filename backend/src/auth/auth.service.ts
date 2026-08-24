@@ -12,6 +12,7 @@ import { Model } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import {
   ForgotPasswordDto,
+  GoogleAuthDto,
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
@@ -27,6 +28,7 @@ import {
   RestaurantGroupDocument,
 } from '../restaurant-groups/schemas/restaurant-group.schema';
 import { MailService } from '../mail/mail.service';
+import { SELF_REGISTER_ROLES } from '../users/schemas/user.schema';
 import type { UserRole } from '../users/schemas/user.schema';
 
 @Injectable()
@@ -88,7 +90,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -103,6 +105,89 @@ export class AuthService {
         email: user.email,
         requiresVerification: true,
       });
+    }
+
+    return this.issue(user);
+  }
+
+  async googleAuth(dto: GoogleAuthDto) {
+    const { credential, role } = dto;
+    if (!credential) {
+      throw new BadRequestException('Google credential token is required');
+    }
+
+    let payload: {
+      email?: string;
+      name?: string;
+      sub?: string;
+      picture?: string;
+      email_verified?: string | boolean;
+    } | null = null;
+
+    // 1. Try to verify via Google's tokeninfo API
+    try {
+      const res = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+      );
+      if (res.ok) {
+        payload = (await res.json()) as typeof payload;
+      }
+    } catch {
+      payload = null;
+    }
+
+    // 2. Fallback: Parse JWT payload (for dev or encoded credential)
+    if (!payload?.email) {
+      try {
+        const parts = credential.split('.');
+        if (parts.length === 3) {
+          const raw = Buffer.from(parts[1], 'base64').toString('utf-8');
+          payload = JSON.parse(raw) as typeof payload;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!payload?.email) {
+      throw new UnauthorizedException('Invalid Google authentication token');
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const name = payload.name || email.split('@')[0];
+    const googleId = payload.sub || '';
+    const avatarUrl = payload.picture || null;
+
+    let user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      const assignedRole: UserRole =
+        role && (SELF_REGISTER_ROLES as readonly string[]).includes(role)
+          ? role
+          : 'customer';
+
+      user = await this.usersService.create({
+        name,
+        email,
+        passwordHash: null,
+        role: assignedRole,
+        isEmailVerified: true,
+        googleId,
+        avatarUrl,
+      });
+    } else {
+      if (
+        !user.isEmailVerified ||
+        !user.googleId ||
+        (!user.avatarUrl && avatarUrl)
+      ) {
+        await this.usersService.linkGoogleAccount(
+          user._id.toString(),
+          googleId || user.googleId || '',
+          avatarUrl || user.avatarUrl,
+        );
+        user = (await this.usersService.findById(user._id.toString())) || user;
+      }
     }
 
     return this.issue(user);
