@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 import { useAuth } from '../context/AuthContext'
 import { homePathForRole } from '../api'
 
@@ -41,7 +42,7 @@ export default function Login() {
     <AuthShell
       tab="login"
       title="Login"
-      subtitle="Sign in with the email and password you registered."
+      subtitle="Sign in to your BiteRush account."
       error={!isUnverified ? error : null}
     >
       {isUnverified && (
@@ -58,7 +59,19 @@ export default function Login() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-6">
+      {/* GOOGLE SIGN IN BUTTON */}
+      <div className="mt-6">
+        <GoogleSignInButton mode="login" onError={setError} />
+      </div>
+
+      <div className="relative my-6 flex items-center justify-center">
+        <div className="w-full border-t border-outline-variant/30" />
+        <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+          Or continue with email
+        </span>
+      </div>
+
+      <form onSubmit={handleSubmit}>
         <label className="block text-sm font-semibold">
           Email address
           <input

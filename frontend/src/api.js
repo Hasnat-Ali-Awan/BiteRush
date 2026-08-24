@@ -95,6 +95,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  googleAuth: (payload) =>
+    request('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   verifyEmail: (payload) =>
     request('/auth/verify-email', {
       method: 'POST',

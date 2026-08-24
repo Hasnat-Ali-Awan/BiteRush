@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 import { useAuth } from '../context/AuthContext'
 import { homePathForRole } from '../api'
 
@@ -63,15 +64,15 @@ export default function Register() {
       subtitle="Register as a customer, main manager, or delivery rider."
       error={error}
     >
-      <form onSubmit={handleSubmit} className="mt-6">
+      <div className="mt-6">
         <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-container p-1">
           {ROLES.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => update('role', item.id)}
-              className={`rounded-lg py-2 text-xs font-semibold sm:text-sm ${
-                form.role === item.id ? 'bg-white text-primary shadow' : ''
+              className={`rounded-lg py-2 text-xs font-semibold sm:text-sm transition ${
+                form.role === item.id ? 'bg-white text-primary shadow' : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               {item.label}
@@ -81,6 +82,25 @@ export default function Register() {
         <p className="mt-2 text-xs text-on-surface-variant">
           Branch managers receive an email invite from the main manager.
         </p>
+
+        {/* GOOGLE SIGN UP BUTTON */}
+        <div className="mt-5">
+          <GoogleSignInButton
+            mode="register"
+            role={form.role}
+            onError={setError}
+          />
+        </div>
+
+        <div className="relative my-6 flex items-center justify-center">
+          <div className="w-full border-t border-outline-variant/30" />
+          <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+            Or sign up with email
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit}>
 
         <label className="mt-4 block text-sm font-semibold">
           Full name

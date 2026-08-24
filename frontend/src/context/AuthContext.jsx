@@ -49,6 +49,9 @@ export function AuthProvider({ children }) {
       async login(input) {
         return applyAuth(await api.login(input))
       },
+      async googleAuth(input) {
+        return applyAuth(await api.googleAuth(input))
+      },
       async verifyEmail(input) {
         return applyAuth(await api.verifyEmail(input))
       },

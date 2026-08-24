@@ -243,4 +243,94 @@ describe('AuthService', () => {
       expect(result.message).toContain('successfully reset');
     });
   });
+
+  describe('googleAuth', () => {
+    it('should create new user and issue token if user does not exist', async () => {
+      const mockPayload = {
+        email: 'googleuser@example.com',
+        name: 'Google User',
+        sub: 'google-sub-123',
+        picture: 'https://avatar.url',
+      };
+      const b64Header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString(
+        'base64',
+      );
+      const b64Payload = Buffer.from(JSON.stringify(mockPayload)).toString(
+        'base64',
+      );
+      const token = `${b64Header}.${b64Payload}.signature`;
+
+      usersService.findByEmail!.mockResolvedValue(null);
+      usersService.create!.mockResolvedValue({
+        _id: 'new-google-user-id',
+        name: 'Google User',
+        email: 'googleuser@example.com',
+        role: 'customer',
+        isEmailVerified: true,
+      });
+
+      const result = await service.googleAuth({
+        credential: token,
+        role: 'customer',
+      });
+
+      expect(usersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'googleuser@example.com',
+          name: 'Google User',
+          googleId: 'google-sub-123',
+          isEmailVerified: true,
+        }),
+      );
+      expect(result).toHaveProperty('token');
+      expect(result).toHaveProperty('user');
+    });
+
+    it('should link google account and login existing user', async () => {
+      const mockPayload = {
+        email: 'existing@example.com',
+        name: 'Existing User',
+        sub: 'google-sub-456',
+      };
+      const b64Header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString(
+        'base64',
+      );
+      const b64Payload = Buffer.from(JSON.stringify(mockPayload)).toString(
+        'base64',
+      );
+      const token = `${b64Header}.${b64Payload}.signature`;
+
+      const existingUser = {
+        _id: 'existing-user-id',
+        name: 'Existing User',
+        email: 'existing@example.com',
+        role: 'customer',
+        isEmailVerified: false,
+        googleId: null,
+      };
+
+      usersService.findByEmail!.mockResolvedValue(existingUser);
+      usersService.linkGoogleAccount!.mockResolvedValue({
+        ...existingUser,
+        isEmailVerified: true,
+        googleId: 'google-sub-456',
+      });
+      usersService.findById!.mockResolvedValue({
+        ...existingUser,
+        isEmailVerified: true,
+        googleId: 'google-sub-456',
+      });
+
+      const result = await service.googleAuth({
+        credential: token,
+      });
+
+      expect(usersService.linkGoogleAccount).toHaveBeenCalledWith(
+        'existing-user-id',
+        'google-sub-456',
+        undefined,
+      );
+      expect(result).toHaveProperty('token');
+    });
+  });
 });
