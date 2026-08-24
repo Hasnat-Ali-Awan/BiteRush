@@ -90,6 +90,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateBranch: (groupId, branchId, payload) =>
+    request(`/groups/${groupId}/branches/${branchId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteBranch: (groupId, branchId) =>
+    request(`/groups/${groupId}/branches/${branchId}`, {
+      method: 'DELETE',
+    }),
   inviteBranchManager: (branchId, payload) =>
     request(`/groups/branches/${branchId}/invite-manager`, {
       method: 'POST',

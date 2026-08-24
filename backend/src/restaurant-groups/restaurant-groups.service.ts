@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -15,6 +16,7 @@ import {
   CreateBranchDto,
   CreateRestaurantGroupDto,
   InviteStaffDto,
+  UpdateBranchDto,
 } from './dto/restaurant-group.dto';
 import { UsersService } from '../users/users.service';
 import {
@@ -23,6 +25,10 @@ import {
 } from '../restaurants/schemas/restaurant.schema';
 import { MailService } from '../mail/mail.service';
 import { AccessScopeService } from '../access/access-scope.service';
+import { Order, OrderDocument } from '../orders/schemas/order.schema';
+import { MenuItem, MenuItemDocument } from '../menu/schemas/menu-item.schema';
+import { Reservation, ReservationDocument } from '../reservations/schemas/reservation.schema';
+import { User, UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
 export class RestaurantGroupsService {
@@ -31,6 +37,14 @@ export class RestaurantGroupsService {
     private readonly groupModel: Model<RestaurantGroupDocument>,
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Order.name)
+    private readonly orderModel: Model<OrderDocument>,
+    @InjectModel(MenuItem.name)
+    private readonly menuItemModel: Model<MenuItemDocument>,
+    @InjectModel(Reservation.name)
+    private readonly reservationModel: Model<ReservationDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     private readonly usersService: UsersService,
     private readonly mailService: MailService,
     private readonly accessScope: AccessScopeService,
@@ -45,9 +59,9 @@ export class RestaurantGroupsService {
     const group = await this.groupModel.create({
       name: dto.name.trim(),
       ownerId,
-      cuisine: dto.cuisine ?? '',
-      heroImage: dto.heroImage ?? '',
-      description: dto.description ?? '',
+      cuisine: dto.cuisine?.trim() ?? '',
+      heroImage: dto.heroImage?.trim() ?? '',
+      description: dto.description?.trim() ?? '',
     });
 
     await this.usersService.setGroupId(ownerId, String(group._id));
@@ -72,20 +86,151 @@ export class RestaurantGroupsService {
 
   async createBranch(groupId: string, dto: CreateBranchDto, ownerId: string) {
     const group = await this.accessScope.assertGroupOwner(ownerId, groupId);
+    const branchName = dto.branch.trim();
+
+    // Check for duplicate branch name in this group
+    const existingBranch = await this.restaurantModel.findOne({
+      groupId: group._id,
+      branch: {
+        $regex: new RegExp(`^${branchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      },
+    });
+    if (existingBranch) {
+      throw new ConflictException(`A branch named "${branchName}" already exists in your brand.`);
+    }
+
+    // Validate location if provided
+    let location = dto.location ?? null;
+    if (location && (typeof location.lat === 'number' || typeof location.lng === 'number')) {
+      if (
+        !Number.isFinite(location.lat) ||
+        !Number.isFinite(location.lng) ||
+        location.lat < -90 ||
+        location.lat > 90 ||
+        location.lng < -180 ||
+        location.lng > 180
+      ) {
+        throw new BadRequestException('Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.');
+      }
+    }
+
     const branch = await this.restaurantModel.create({
       groupId: group._id,
       name: group.name,
-      branch: dto.branch.trim(),
-      address: dto.address ?? '',
-      location: dto.location ?? { lat: 0, lng: 0 },
+      branch: branchName,
+      address: dto.address.trim(),
+      location: location ?? { lat: 0, lng: 0 },
       cuisine: group.cuisine,
-      eta: dto.eta ?? '',
-      heroImage: dto.heroImage || group.heroImage,
-      deliveryFee: dto.deliveryFee ?? 0,
-      minOrder: dto.minOrder ?? 0,
+      eta: dto.eta?.trim() ?? '',
+      heroImage: dto.heroImage?.trim() || group.heroImage,
+      deliveryFee: Number(dto.deliveryFee ?? 0),
+      minOrder: Number(dto.minOrder ?? 0),
       avgRating: 0,
     });
     return this.mapBranch(branch.toObject(), group);
+  }
+
+  async updateBranch(
+    groupId: string,
+    branchId: string,
+    dto: UpdateBranchDto,
+    ownerId: string,
+  ) {
+    const group = await this.accessScope.assertGroupOwner(ownerId, groupId);
+    const branch = await this.restaurantModel.findById(branchId);
+    if (!branch || String(branch.groupId) !== groupId) {
+      throw new NotFoundException('Branch not found in your brand');
+    }
+
+    if (dto.branch !== undefined) {
+      const nextBranchName = dto.branch.trim();
+      if (nextBranchName.toLowerCase() !== branch.branch.toLowerCase()) {
+        const existingBranch = await this.restaurantModel.findOne({
+          groupId: group._id,
+          _id: { $ne: branch._id },
+          branch: {
+            $regex: new RegExp(`^${nextBranchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+          },
+        });
+        if (existingBranch) {
+          throw new ConflictException(`A branch named "${nextBranchName}" already exists in your brand.`);
+        }
+      }
+      branch.branch = nextBranchName;
+    }
+
+    if (dto.address !== undefined) branch.address = dto.address.trim();
+    if (dto.eta !== undefined) branch.eta = dto.eta.trim();
+    if (dto.deliveryFee !== undefined) branch.deliveryFee = Number(dto.deliveryFee);
+    if (dto.minOrder !== undefined) branch.minOrder = Number(dto.minOrder);
+    if (dto.heroImage !== undefined) branch.heroImage = dto.heroImage.trim();
+
+    if (dto.location !== undefined) {
+      const loc = dto.location;
+      if (loc && (typeof loc.lat === 'number' || typeof loc.lng === 'number')) {
+        if (
+          !Number.isFinite(loc.lat) ||
+          !Number.isFinite(loc.lng) ||
+          loc.lat < -90 ||
+          loc.lat > 90 ||
+          loc.lng < -180 ||
+          loc.lng > 180
+        ) {
+          throw new BadRequestException('Invalid coordinates.');
+        }
+      }
+      branch.location = loc ?? { lat: 0, lng: 0 };
+    }
+
+    await branch.save();
+    return this.mapBranch(branch.toObject(), group);
+  }
+
+  async deleteBranch(groupId: string, branchId: string, ownerId: string) {
+    const group = await this.accessScope.assertGroupOwner(ownerId, groupId);
+    const branch = await this.restaurantModel.findById(branchId);
+    if (!branch || String(branch.groupId) !== groupId) {
+      throw new NotFoundException('Branch not found in your brand');
+    }
+
+    // Safety validation: verify if there are active in-progress orders
+    const activeOrdersCount = await this.orderModel.countDocuments({
+      restaurantId: branch._id,
+      status: {
+        $in: [
+          'pending',
+          'accepted',
+          'preparing',
+          'ready',
+          'assigned',
+          'picked_up',
+          'on_the_way',
+        ],
+      },
+    });
+
+    if (activeOrdersCount > 0) {
+      throw new ConflictException(
+        `Cannot delete branch "${branch.branch}" because it has ${activeOrdersCount} active in-progress order(s). Please complete or cancel them before deleting this branch.`,
+      );
+    }
+
+    // Cascade delete related records & clean references
+    await Promise.all([
+      this.restaurantModel.findByIdAndDelete(branch._id),
+      this.menuItemModel.deleteMany({ restaurantId: branch._id }),
+      this.reservationModel.deleteMany({ restaurantId: branch._id }),
+      this.userModel.updateMany(
+        { restaurantId: branch._id },
+        { $set: { restaurantId: null } },
+      ),
+    ]);
+
+    return {
+      success: true,
+      message: `Branch "${branch.branch}" and all its menu items were deleted successfully.`,
+      deletedBranchId: branchId,
+    };
   }
 
   async inviteBranchManager(

@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -11,6 +13,7 @@ import {
   CreateBranchDto,
   CreateRestaurantGroupDto,
   InviteStaffDto,
+  UpdateBranchDto,
 } from './dto/restaurant-group.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -46,6 +49,25 @@ export class RestaurantGroupsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.groupsService.createBranch(groupId, dto, user.userId);
+  }
+
+  @Patch(':groupId/branches/:branchId')
+  updateBranch(
+    @Param('groupId') groupId: string,
+    @Param('branchId') branchId: string,
+    @Body() dto: UpdateBranchDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.updateBranch(groupId, branchId, dto, user.userId);
+  }
+
+  @Delete(':groupId/branches/:branchId')
+  deleteBranch(
+    @Param('groupId') groupId: string,
+    @Param('branchId') branchId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.deleteBranch(groupId, branchId, user.userId);
   }
 
   @Post('branches/:branchId/invite-manager')

@@ -24,11 +24,22 @@ export function CartProvider({ children }) {
       setCart(next)
     }
 
-    function addItem(restaurant, dish, extras = []) {
-      const lineId = `${dish.id}:${(extras || []).map((e) => e.name).join(',')}`
-      const price =
-        Number(dish.basePrice || 0) +
-        extras.reduce((sum, extra) => sum + Number(extra.price || 0), 0)
+    function addItem(restaurant, dish, variant = null, extras = [], quantity = 1) {
+      const variantKey = variant?.name ? `v:${variant.name}` : 'v:def'
+      const extrasKey = (extras || []).map((e) => e.name).sort().join(',')
+      const lineId = `${dish.id}_${variantKey}_e:${extrasKey}`
+
+      const base = Number(dish.basePrice || 0)
+      const variantDelta = Number(variant?.priceDelta || 0)
+      const extrasTotal = (extras || []).reduce(
+        (sum, extra) => sum + Number(extra.price || 0),
+        0,
+      )
+      const unitPrice = Math.max(0, base + variantDelta + extrasTotal)
+
+      const displayName = variant?.name && variant.name.toLowerCase() !== 'regular'
+        ? `${dish.name} (${variant.name})`
+        : dish.name
 
       let items = cart.items
       if (cart.restaurant && cart.restaurant.id !== restaurant.id) {
@@ -39,7 +50,7 @@ export function CartProvider({ children }) {
       const nextItems = existing
         ? items.map((item) =>
             item.lineId === lineId
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantity: item.quantity + (quantity || 1) }
               : item,
           )
         : [
@@ -47,11 +58,12 @@ export function CartProvider({ children }) {
             {
               lineId,
               menuItemId: dish.id,
-              name: dish.name,
-              image: dish.images?.[0],
-              extras,
-              price,
-              quantity: 1,
+              name: displayName,
+              image: dish.images?.[0] || null,
+              variant: variant || null,
+              extras: extras || [],
+              price: unitPrice,
+              quantity: quantity || 1,
             },
           ]
 

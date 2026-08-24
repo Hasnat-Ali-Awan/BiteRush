@@ -144,26 +144,33 @@ export default function RiderDashboard() {
 
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold">New requests</h2>
+            <h2 className="text-lg font-bold">New Delivery Requests</h2>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {available.length}
             </span>
           </div>
           {available.length === 0 ? (
-            <p className="rounded-xl bg-white p-4 text-sm text-on-surface-variant shadow-sm">
-              No ready orders waiting for pickup.
+            <p className="rounded-2xl bg-white p-6 text-center text-sm text-on-surface-variant shadow-sm">
+              No ready orders waiting for pickup right now.
             </p>
           ) : (
             <div className="space-y-3">
               {available.map((order) => (
-                <article key={order.id} className="rounded-2xl bg-white p-4 shadow-sm">
+                <article key={order.id} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold">{order.orderNumber}</p>
-                      <p className="text-sm text-on-surface-variant">{order.customerName}</p>
-                      <p className="mt-1 text-sm">{order.deliveryAddress || 'Address on file'}</p>
+                      <p className="font-bold text-primary">{order.orderNumber}</p>
+                      <p className="text-sm font-semibold text-on-surface">{order.customerName}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        📍 {order.deliveryAddress || 'Address on file'}
+                      </p>
+                      {order.items?.length > 0 ? (
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          📦 {order.items.map((i) => `${i.quantity}× ${i.name}`).join(', ')}
+                        </p>
+                      ) : null}
                     </div>
-                    <p className="font-bold text-primary">
+                    <p className="text-base font-black text-on-surface">
                       Rs. {Number(order.total).toLocaleString('en-PK')}
                     </p>
                   </div>
@@ -171,9 +178,9 @@ export default function RiderDashboard() {
                     type="button"
                     disabled={busyId === order.id}
                     onClick={() => accept(order.id)}
-                    className="mt-4 w-full rounded-xl bg-primary py-3 font-semibold text-white disabled:opacity-50"
+                    className="mt-4 w-full rounded-xl bg-primary py-3 font-bold text-white shadow-md shadow-primary/20 hover:opacity-95 disabled:opacity-50"
                   >
-                    Accept delivery
+                    Accept Delivery
                   </button>
                 </article>
               ))}
@@ -182,39 +189,74 @@ export default function RiderDashboard() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-lg font-bold">Active deliveries</h2>
+          <h2 className="mb-3 text-lg font-bold">Active Deliveries</h2>
           {active.length === 0 ? (
-            <p className="rounded-xl bg-white p-4 text-sm text-on-surface-variant shadow-sm">
-              You have no active deliveries.
+            <p className="rounded-2xl bg-white p-6 text-center text-sm text-on-surface-variant shadow-sm">
+              You have no active deliveries in progress.
             </p>
           ) : (
-            <div className="space-y-3">
-              {active.map((order) => (
-                <article key={order.id} className="rounded-2xl bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold">{order.orderNumber}</p>
-                      <p className="text-sm capitalize text-primary">
-                        {statusLabel(order.status)}
-                      </p>
-                      <p className="mt-1 text-sm">{order.deliveryAddress || order.customerName}</p>
+            <div className="space-y-4">
+              {active.map((order) => {
+                const navUrl =
+                  order.deliveryLocation?.lat && order.deliveryLocation?.lng
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.deliveryLocation.lat},${order.deliveryLocation.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        order.deliveryAddress || '',
+                      )}`
+
+                return (
+                  <article
+                    key={order.id}
+                    className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-primary">{order.orderNumber}</p>
+                          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold capitalize text-primary">
+                            {statusLabel(order.status)}
+                          </span>
+                        </div>
+                        <p className="mt-1 font-semibold text-on-surface">{order.customerName}</p>
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          📍 {order.deliveryAddress || 'Delivery Address'}
+                        </p>
+                        {order.items?.length > 0 ? (
+                          <p className="mt-1 text-xs text-on-surface-variant">
+                            📦 {order.items.map((i) => `${i.quantity}× ${i.name}`).join(', ')}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="material-symbols-outlined text-3xl text-primary">
+                        two_wheeler
+                      </span>
                     </div>
-                    <span className="material-symbols-outlined text-3xl text-primary">
-                      two_wheeler
-                    </span>
-                  </div>
-                  {NEXT_STATUS[order.status] ? (
-                    <button
-                      type="button"
-                      disabled={busyId === order.id}
-                      onClick={() => advance(order)}
-                      className="mt-4 w-full rounded-xl border border-primary py-3 font-semibold text-primary disabled:opacity-50"
-                    >
-                      Mark {statusLabel(NEXT_STATUS[order.status])}
-                    </button>
-                  ) : null}
-                </article>
-              ))}
+
+                    <div className="mt-4 flex gap-2">
+                      <a
+                        href={navUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 py-2.5 text-xs font-bold text-primary hover:bg-primary/10"
+                      >
+                        <span>🗺️</span>
+                        <span>Google Maps</span>
+                      </a>
+                    </div>
+
+                    {NEXT_STATUS[order.status] ? (
+                      <button
+                        type="button"
+                        disabled={busyId === order.id}
+                        onClick={() => advance(order)}
+                        className="mt-3 w-full rounded-xl bg-primary py-3 font-bold text-white shadow-md shadow-primary/20 hover:opacity-95 disabled:opacity-50"
+                      >
+                        Mark {statusLabel(NEXT_STATUS[order.status])}
+                      </button>
+                    ) : null}
+                  </article>
+                )
+              })}
             </div>
           )}
         </section>

@@ -73,7 +73,7 @@ export default function MenuManagement({ restaurantId, onRestaurant }) {
     } finally {
       setLoading(false)
     }
-  }, [restaurantId, categoryId, availability, search, onRestaurant])
+  }, [restaurantId, branchId, categoryId, availability, search, onRestaurant])
 
   useEffect(() => {
     setLoading(true)

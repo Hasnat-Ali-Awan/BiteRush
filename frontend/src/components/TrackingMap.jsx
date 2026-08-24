@@ -51,7 +51,7 @@ export default function TrackingMap({ restaurant, customer, rider, status }) {
   const center = points[0] || DEFAULT_CENTER
 
   const { isLoaded, loadError } = useJsApiLoader({
-    id: 'biterush-tracking-map',
+    id: 'google-map-script',
     googleMapsApiKey: apiKey || '',
     libraries: LIBRARIES,
   })
